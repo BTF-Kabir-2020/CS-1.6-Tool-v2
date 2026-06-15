@@ -1,70 +1,69 @@
-<div dir="rtl" align="right">
-
 # CS 1.6 Tool v2 (Rust)
 
-بازنویسی کامل پروژه `cs16-rust` — با معماری تمیزتر و روش‌های متعدد خواندن حافظه.
+**EN:** Complete rewrite of `cs16-rust` — cleaner architecture with multi-strategy memory reading.
+**FA:** بازنویسی کامل پروژه `cs16-rust` — با معماری تمیزتر و روش‌های متعدد خواندن حافظه.
 
 ---
 
-## شروع سریع
+## Quick Start / شروع سریع
 
 ```powershell
-# PowerShell را Run as Administrator باز کن
+# Open PowerShell as Run as Administrator / PowerShell را Run as Administrator باز کن
 cd cs16-tool-v2
 cargo run --release
 ```
 
-1. CS 1.6 را باز کن
-2. **وارد match شو** (New Game / سرور)
-3. overlay و کنسول باید پول/ammo را نشان دهند
+1. Open CS 1.6 / CS 1.6 را باز کن
+2. **Enter a match** (New Game / Server) / **وارد match شو** (New Game / سرور)
+3. Overlay and console should show money/ammo / overlay و کنسول باید پول/ammo را نشان دهند
 
 ---
 
-## ویژگی‌ها
+## Features / ویژگی‌ها
 
-| بخش | وضعیت | توضیح |
-|-----|--------|--------|
-| اتصال External به `hl.exe` | ✅ | OpenProcess + Toolhelp32 |
-| خواندن/نوشتن حافظه | ✅ | ReadProcessMemory / WriteProcessMemory |
-| پول (hw + client + entity) | ✅ | ۳ استراتژی fallback |
-| Clip / Reserve | ✅ | چند chain + pick_best |
-| HP / Armor | ⚙️ | offset دستی در config |
-| Game Overlay | ✅ | Win32 GDI شفاف |
-| Position (XYZ) | ⚙️ | ۶ استراتژی discovery |
-| Reconnect خودکار | ✅ | قطع اتصال / تغییر base |
+| Section | Status | Description |
+|---------|--------|-------------|
+| External connection to `hl.exe` | ✅ | OpenProcess + Toolhelp32 |
+| Read/Write memory | ✅ | ReadProcessMemory / WriteProcessMemory |
+| Money (hw + client + entity) | ✅ | 3 fallback strategies |
+| Clip / Reserve | ✅ | Multiple chains + pick_best |
+| HP / Armor | ⚙️ | Manual offset in config |
+| Game Overlay | ✅ | Win32 GDI transparent |
+| Position (XYZ) | ⚙️ | 6 discovery strategies |
+| Auto reconnect | ✅ | Disconnect / base change |
 | sw.dll fallback | ✅ | Software renderer |
 
 ---
 
-## Offsetها
+## Offsets / آفست‌ها
 
-**منبع اصلی:** `1_cs16` / `2_cs16` — همان chainهای تست‌شده شما.
+**Original source:** `1_cs16` / `2_cs16` — your tested chains.
 
-| فیلد | RVA / Chain |
-|------|-------------|
+| Field | RVA / Chain |
+|-------|-------------|
 | Reserve | `hw+0x7AF55C` → `74,5C0,A4,5E8` |
 | Money hw | `hw+0x6E92AC` → `1CC,320,4,7C,21C` |
 | Money client | `client+0x1213C4` |
-| Clip ×3 | همان `CLIP_CHAINS` در C++ |
+| Clip ×3 | Same as `CLIP_CHAINS` in C++ |
 
-Targets: **15000 / 15 / 20** — مثل `DESIRED_*` در C++.
+Targets: **15000 / 15 / 20** — like `DESIRED_*` in C++.
 
 ---
 
-## روش خواندن پول (اولویت)
+## Money Reading Priority / اولویت خواندن پول
 
 1. `hw.dll + RVA` → Local Player → `+0xE4` (money)
-2. Pointer chain در `[chains.money_hw]`
+2. Pointer chain in `[chains.money_hw]`
 3. `client.dll + direct_rva` fallback
-4. `entity + money_offset` از local player
+4. `entity + money_offset` from local player
 
 ---
 
-## ساختار پروژه
+## Project Structure / ساختار پروژه
 
 ```
 src/
-├── main.rs           # Entry point — ۳ thread
+├── main.rs           # Entry point — 3 threads
 ├── config.rs         # AppConfig + parse helpers
 ├── error.rs          # AppError + MemoryError
 ├── win/
@@ -72,7 +71,7 @@ src/
 │   ├── memory.rs     # MemoryReader/Writer, resolve_chain
 │   └── window.rs     # find_game_window, get_game_rect
 ├── game/
-│   ├── engine.rs     # GameEngine — منطق اصلی
+│   ├── engine.rs     # GameEngine — main logic
 │   ├── state.rs      # GameState, format_status
 │   ├── local_player.rs # Local Player discovery
 │   └── position.rs   # Position (vec3) discovery
@@ -82,39 +81,39 @@ src/
     └── mod.rs        # DebugConsole
 ```
 
-**مدل thread:**
-- **Memory Thread** — هر N ms: read/write + GameState
-- **Overlay Thread** — ~60 FPS، GDI روی پنجره بازی
-- **Main Thread** — کلیدها + console status
+**Thread model / مدل thread:**
+- **Memory Thread** — Every N ms: read/write + GameState
+- **Overlay Thread** — ~60 FPS, GDI on game window
+- **Main Thread** — Keys + console status
 
 ---
 
-## کلیدها
+## Keybinds / کلیدها
 
-| کلید | عمل |
-|------|-----|
-| Q / End | خروج |
-| Insert | نمایش/مخفی overlay |
-| F7 | toggle debug console |
+| Key | Action |
+|-----|--------|
+| Q / End | Exit |
+| Insert | Toggle overlay |
+| F7 | Toggle debug console |
 
 ---
 
 ## CLI
 
 ```powershell
-# حالت عادی
+# Normal mode / حالت عادی
 cargo run --release
 
-# فقط خواندن (بدون نوشتن)
+# Read only (no writing) / فقط خواندن (بدون نوشتن)
 cargo run --release -- --read-only
 
-# بدون overlay
+# No overlay / بدون overlay
 cargo run --release -- --no-overlay
 
-# دیباگ کامل
+# Full debug / دیباگ کامل
 cargo run --release -- --debug
 
-# config سفارشی
+# Custom config / config سفارشی
 cargo run --release -- -c my.toml
 ```
 
@@ -197,10 +196,10 @@ max_value = 150
 
 ---
 
-## وابستگی‌ها
+## Dependencies / وابستگی‌ها
 
-| Crate | کاربرد |
-|-------|--------|
+| Crate | Purpose |
+|-------|---------|
 | `windows` 0.58 | Win32 API |
 | `clap` 4 | CLI |
 | `parking_lot` 0.12 | RwLock |
@@ -211,22 +210,22 @@ max_value = 150
 
 ---
 
-## ساخت
+## Building / ساخت
 
 ```powershell
-# Release (توصیه شده)
+# Release (recommended) / Release (توصیه شده)
 cargo build --release
 
 # Debug
 cargo build
 
-# تست
+# Tests / تست
 cargo test
 ```
 
 ---
 
-## منابع اینترنتی
+## Online Resources / منابع اینترنتی
 
 - [UnknownCheats — CS1.6 Finding Offsets](https://www.unknowncheats.me/forum/counterstrike-1-5-1-6-and-mods/125661-cs1-6-finding-offsets.html)
 - [BLASTHACK CS 1.6 Dumper](https://www.blast.hk/threads/225183/)
@@ -236,19 +235,16 @@ cargo test
 
 ---
 
-## مستندات مرتبط
+## Related Documentation / مستندات مرتبط
 
-| فایل | محتوا |
-|------|--------|
-| `ARCHITECTURE.md` | معماری کامل + flow |
-| [`../پیشرفت-CS16.md`](../پیشرفت-CS16.md) | گزارش پیشرفت |
-| [`../آموزش-پیدا-کردن-Chain-و-Offset-از-صفر.md`](../آموزش-پیدا-کردن-Chain-و-Offset-از-صفر.md) | آموزش CE + ReClass + x32dbg |
-
----
+| File | Content |
+|------|---------|
+| `ARCHITECTURE.md` | Full architecture + flow / معماری کامل + flow |
+| `CHANGELOG.md` | Version history / تاریخچه نسخه‌ها |
 
 ---
 
-## ⚠️ Disclaimer / سلب مسئولیت
+## Disclaimer / سلب مسئولیت
 
 > **EN:** This software is provided "AS IS" for **educational and research purposes only**.
 > The author(s) are **NOT responsible** for any damage, data loss, hardware failure,
@@ -267,6 +263,4 @@ cargo test
 
 ## License
 
-**Non-Commercial License** — فقط آموزشی. مشاهده [LICENSE](LICENSE).
-
-</div>
+**Non-Commercial License** — Educational use only. See [LICENSE](LICENSE).

@@ -1,62 +1,61 @@
-<div dir="rtl" align="right">
+# CS 1.6 Tool v2 Architecture / معماری CS 1.6 Tool v2
 
-# معماری CS 1.6 Tool v2
-
-**آخرین به‌روزرسانی:** ژوئن ۲۰۲۶
+**Last updated / آخرین به‌روزرسانی:** June 2026 / ژوئن ۲۰۲۶
 
 ---
 
-## فهرست
+## Table of Contents / فهرست
 
-1. [نمای کلی](#۱-نمای-کلی)
-2. [ساختار پوشه](#۲-ساختار-پوشه)
-3. [thread مدل](#۳-thread-مدل)
-4. [ماژول win/ — دسترسی به حافظه](#۴-ماژول-win)
-5. [ماژول game/ — موتور بازی](#۵-ماژول-game)
-6. [ماژول overlay/ — رندر روی پنجره بازی](#۶-ماژول-overlay)
-7. [ماژول debug/ — کنسول دیباگ](#۷-ماژول-debug)
-8. [ماژول config/ — پیکربندی](#۸-ماژول-config)
-9. [جریان داده](#۹-جریان-داده)
-10. [مدیریت state](#۱۰-مدیریت-state)
-11. [_resolve chain_ — الگوریتم](#۱۱-resolve-chain)
-12. [Local Player Discovery](#۱۲-local-player-discovery)
-13. [Position Discovery](#۱۳-position-discovery)
-14. [Overlay Rendering](#۱۴-overlay-rendering)
-15. [Window Management](#۱۵-window-management)
-16. [Error Handling](#۱۶-error-handling)
-17. [وابستگی‌ها](#۱۷-وابستگی‌ها)
-18. [ایمنی حافظه — Safe vs Unsafe](#۱۸-ایمنی-حافظه)
-
----
-
-## ۱. نمای کلی
-
-ابزار External Memory برای Counter-Strike 1.6 (GoldSrc Engine) — بازنویسی کامل با Rust.
-
-**ویژگی‌های کلیدی:**
-- خواندن/نوشتن حافظه `hl.exe` از بیرون (External)
-- چندین استراتژی resolve آدرس (Entity, Chain, Direct)
-- Overlay شفاف روی پنجره بازی (GDI + LWA_COLORKEY)
-- Reconnect خودکار
-- پشتیبانی از hw.dll و sw.dll (Software Renderer)
+1. [Overview / نمای کلی](#1-overview--نمای-کلی)
+2. [Folder Structure / ساختار پوشه](#2-folder-structure--ساختار-پوشه)
+3. [Thread Model / مدل thread](#3-thread-model--مدل-thread)
+4. [Module win/ — Memory Access / ماژول win/ — دسترسی به حافظه](#4-module-win--memory-access--ماژول-win--دسترسی-به-حافظه)
+5. [Module game/ — Game Engine / ماژول game/ — موتور بازی](#5-module-game--game-engine--ماژول-game--موتور-بازی)
+6. [Module overlay/ — Render on Game Window / ماژول overlay/ — رندر روی پنجره بازی](#6-module-overlay--render-on-game-window--ماژول-overlay--رندر-روی-پنجره-بازی)
+7. [Module debug/ — Debug Console / ماژول debug/ — کنسول دیباگ](#7-module-debug--debug-console--ماژول-debug--کنسول-دیباگ)
+8. [Module config/ — Configuration / ماژول config/ — پیکربندی](#8-module-config--configuration--ماژول-config--پیکربندی)
+9. [Data Flow / جریان داده](#9-data-flow--جریان-داده)
+10. [State Management / مدیریت state](#10-state-management--مدیریت-state)
+11. [resolve chain — Algorithm / الگوریتم resolve chain](#11-resolve-chain--الگوریتم)
+12. [Local Player Discovery](#12-local-player-discovery)
+13. [Position Discovery](#13-position-discovery)
+14. [Overlay Rendering](#14-overlay-rendering)
+15. [Window Management](#15-window-management)
+16. [Error Handling / مدیریت خطا](#16-error-handling--مدیریت-خطا)
+17. [Dependencies / وابستگی‌ها](#17-dependencies--وابستگی‌ها)
+18. [Memory Safety — Safe vs Unsafe / ایمنی حافظه](#18-memory-safety--safe-vs-unsafe--ایمنی-حافظه)
 
 ---
 
-## ۲. ساختار پوشه
+## 1. Overview / نمای کلی
+
+External Memory Tool for Counter-Strike 1.6 (GoldSrc Engine) — complete rewrite in Rust.
+<br>ابزار External Memory برای Counter-Strike 1.6 (GoldSrc Engine) — بازنویسی کامل با Rust.
+
+**Key features / ویژگی‌های کلیدی:**
+- Read/write `hl.exe` memory from outside (External) / خواندن/نوشتن حافظه `hl.exe` از بیرون
+- Multiple address resolution strategies (Entity, Chain, Direct) / چندین استراتژی resolve آدرس
+- Transparent overlay on game window (GDI + LWA_COLORKEY) / Overlay شفاف روی پنجره بازی
+- Auto reconnect / Reconnect خودکار
+- hw.dll and sw.dll (Software Renderer) support / پشتیبانی از hw.dll و sw.dll
+
+---
+
+## 2. Folder Structure / ساختار پوشه
 
 ```
 cs16-tool-v2/
-├── Cargo.toml              # وابستگی‌ها و profile
-├── config.toml             # پیکربندی کاربر
-├── README.md               # شروع سریع
-├── ARCHITECTURE.md         # این فایل
+├── Cargo.toml              # Dependencies & profile / وابستگی‌ها و profile
+├── config.toml             # User configuration / پیکربندی کاربر
+├── README.md               # Quick start / شروع سریع
+├── ARCHITECTURE.md         # This file / این فایل
 └── src/
-    ├── main.rs             # Entry point — thread orchestration
-    ├── lib.rs              # ماژول‌های pub
+    ├── main.rs             # Entry point — thread orchestration / نقطه ورود — هماهنگی thread
+    ├── lib.rs              # Public modules / ماژول‌های pub
     ├── config.rs           # AppConfig + parse helpers
     ├── error.rs            # AppError + MemoryError
     ├── bin/
-    │   └── dump.rs         # CLI دوم: dump آدرس‌ها
+    │   └── dump.rs         # Second CLI: dump addresses / CLI دوم: dump آدرس‌ها
     ├── win/
     │   ├── mod.rs          # Re-exports
     │   ├── process.rs      # ProcessHandle, find_pid, module_base
@@ -64,7 +63,7 @@ cs16-tool-v2/
     │   └── window.rs       # find_game_window, get_game_rect
     ├── game/
     │   ├── mod.rs          # Re-exports
-    │   ├── engine.rs       # GameEngine — منطق اصلی tick
+    │   ├── engine.rs       # GameEngine — main tick logic / منطق اصلی tick
     │   ├── state.rs        # GameState, StatusDisplay, DebugSnapshot
     │   ├── local_player.rs # Local Player discovery
     │   └── position.rs     # Position (vec3) discovery
@@ -77,42 +76,42 @@ cs16-tool-v2/
 
 ---
 
-## ۳. thread مدل
+## 3. Thread Model / مدل thread
 
-پروژه از **۳ thread** استفاده می‌کند:
+The project uses **3 threads** / پروژه از **۳ thread** استفاده می‌کند:
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │  Main Thread                                                 │
-│  • کلیدها: Q/End=خروج, Insert=toggle overlay, F7=debug      │
-│  • چاپ status در کنسول (هر 50ms)                            │
-│  • کنترل lifecycle                                           │
+│  • Keys: Q/End=exit, Insert=toggle overlay, F7=debug         │
+│  • Print status to console (every 50ms) / چاپ status در کنسول │
+│  • Lifecycle control / کنترل lifecycle                        │
 ├──────────────────────────────────────────────────────────────┤
 │  Memory Thread (memory_loop)                                 │
-│  • هر N ms: connect → tick → write GameState                 │
-│  • Reconnect خودکار                                          │
-│  • resolve chainها هر tick                                    │
+│  • Every N ms: connect → tick → write GameState              │
+│  • Auto reconnect / Reconnect خودکار                         │
+│  • Resolve chains every tick / resolve chainها هر tick        │
 ├──────────────────────────────────────────────────────────────┤
 │  Overlay Thread (overlay::run)                               │
 │  • ~60 FPS: InvalidateRect → WM_PAINT → GDI draw            │
-│  • sync موقعیت با پنجره بازی                                 │
+│  • Sync position with game window / sync موقعیت با پنجره بازی │
 │  • PeekMessage loop                                          │
 └──────────────────────────────────────────────────────────────┘
 ```
 
-**ارتباط threadها:**
-- `Arc<RwLock<GameState>>` — بین memory و overlay مشترک
+**Thread communication / ارتباط threadها:**
+- `Arc<RwLock<GameState>>` — shared between memory and overlay / بین memory و overlay مشترک
 - `Arc<AtomicU32>` — PID store
 - `Arc<AtomicBool>` — running flag + debug_on flag
-- `crossbeam_channel` — دستورات overlay (toggle visibility, shutdown)
+- `crossbeam_channel` — overlay commands (toggle visibility, shutdown) / دستورات overlay
 
 ---
 
-## ۴. ماژول win/
+## 4. Module win/ — Memory Access / ماژول win/ — دسترسی به حافظه
 
 ### win/process.rs
 
-**`ProcessHandle`** — مدیریت handle باز به پروسس:
+**`ProcessHandle`** — Process handle management / مدیریت handle باز به پروسس:
 ```rust
 pub struct ProcessHandle {
     handle: HANDLE,
@@ -120,29 +119,29 @@ pub struct ProcessHandle {
 }
 ```
 
-- `attach(name)` → OpenProcess با VM_READ | VM_WRITE | VM_OPERATION | QUERY_INFORMATION
-- `module_base(name)` → اسکن ماژول‌ها با CreateToolhelp32Snapshot
+- `attach(name)` → OpenProcess with VM_READ | VM_WRITE | VM_OPERATION | QUERY_INFORMATION
+- `module_base(name)` → Scan modules with CreateToolhelp32Snapshot
 - Drop → CloseHandle (RAII)
 
-**`find_pid(name)`** → اسکن پروسس‌ها با PROCESSENTRY32W
+**`find_pid(name)`** → Scan processes with PROCESSENTRY32W
 
-**`engine_base(process, modules)`** → اول hw.dll، بعد sw.dll (fallback)
+**`engine_base(process, modules)`** → hw.dll first, sw.dll (fallback)
 
 ### win/memory.rs
 
-**`MemoryReader`** — خواندن حافظه:
+**`MemoryReader`** — Memory reading / خواندن حافظه:
 ```rust
 pub fn read<T: Copy>(&self, address: u32) -> Result<T, MemoryError>
 pub fn read_i32 / read_u32 / read_f32
 ```
 
-**`MemoryWriter`** — نوشتن حافظه:
+**`MemoryWriter`** — Memory writing / نوشتن حافظه:
 ```rust
 pub fn write<T: Copy>(&self, address: u32, value: T) -> Result<(), MemoryError>
 pub fn write_i32 / write_f32
 ```
 
-**`resolve_chain(process, base_ptr, offsets)`** → الگوریتم pointer chain:
+**`resolve_chain(process, base_ptr, offsets)`** → Pointer chain algorithm / الگوریتم pointer chain:
 ```
 addr = base_ptr
 for offset in offsets:
@@ -152,52 +151,52 @@ return addr
 
 ### win/window.rs
 
-**`find_game_window(pid)`** → پیدا کردن HWND بازی:
-1. ابتدا کلاس `Valve001`
-2. عنوان: `Counter-Strike`, `Half-Life`, `Condition Zero`
-3. Fallback: بزرگ‌ترین پنجره visible
+**`find_game_window(pid)`** — Find game HWND / پیدا کردن HWND بازی:
+1. First class `Valve001` / ابتدا کلاس `Valve001`
+2. Title: `Counter-Strike`, `Half-Life`, `Condition Zero`
+3. Fallback: largest visible window / Fallback: بزرگ‌ترین پنجره visible
 
-**Cache:** TTL 800ms برای جلوگیری از اسکن مکرر
+**Cache:** TTL 800ms to prevent frequent scanning / TTL 800ms برای جلوگیری از اسکن مکرر
 
 **`get_game_rect(hwnd)`** → GetClientRect + ClientToScreen
 
 ---
 
-## ۵. ماژول game/
+## 5. Module game/ — Game Engine / ماژول game/ — موتور بازی
 
 ### game/engine.rs — GameEngine
 
-هسته اصلی برنامه. هر tick:
+Main logic. Each tick: / هسته اصلی برنامه. هر tick:
 
 ```
 tick() → GameState
-├── refresh_bases()          # بررسی تغییر hw_base / client_base
+├── refresh_bases()          # Check hw_base / client_base change / بررسی تغییر base
 ├── refresh_money_hw_if_needed()
 ├── refresh_reserve_if_needed()
 ├── discover_local_player_if_needed()
 ├── read_vitals()            # HP + Armor
-├── read_money()             # 3 استراتژی: hw chain → client direct → entity
-├── read_clip()              # چند chain + pick_best
-├── read_reserve()           # یک chain
-├── read_position_values()   # 6 استراتژی مختلف
+├── read_money()             # 3 strategies: hw chain → client direct → entity
+├── read_clip()              # Multiple chains + pick_best
+├── read_reserve()           # Single chain
+├── read_position_values()   # 6 different strategies / ۶ استراتژی مختلف
 ├── read_view_aux()          # H / mouse
-├── merge_cache()            # cache مقدارها
-├── check_ready()            # آیا همه فیلدها OK هستند
+├── merge_cache()            # Cache values / cache مقدارها
+├── check_ready()            # Are all fields OK? / آیا همه فیلدها OK هستند
 └── return GameState
 ```
 
-**اولویت read پول:**
+**Money read priority / اولویت read پول:**
 1. `hw.dll + RVA` → pointer chain → money
-2. `client.dll + direct_rva` → مستقیم
-3. `entity + money_offset` → از local player
+2. `client.dll + direct_rva` → direct / مستقیم
+3. `entity + money_offset` → from local player / از local player
 
-**اولویت read clip:**
-1. همه chainهای `[[chains.clip]]` → بهترین مقدار معتبر
-2. اگر هیچکدام → reserve chain (clip[2] در some builds)
+**Clip read priority / اولویت read clip:**
+1. All `[[chains.clip]]` chains → best valid value / بهترین مقدار معتبر
+2. If none → reserve chain (clip[2] in some builds) / اگر هیچکدام → reserve chain
 
 ### game/state.rs
 
-**`GameState`** — وضعیت لحظه‌ای بازی:
+**`GameState`** — Instant game state / وضعیت لحظه‌ای بازی:
 ```rust
 pub struct GameState {
     pub money: i32,
@@ -220,46 +219,46 @@ pub struct GameState {
 }
 ```
 
-**`format_status()`** — formatter واحد برای کنسول + overlay:
-- `connected=false` → `[منتظر بازی...]`
-- `ready=false` → `[در حال خواندن...]`
-- فیلد نامعتبر → `--` (نه `0`)
+**`format_status()`** — Single formatter for console + overlay / formatter واحد برای کنسول + overlay:
+- `connected=false` → `[Waiting for game...]` / `[منتظر بازی...]`
+- `ready=false` → `[Reading...]` / `[در حال خواندن...]`
+- Invalid field → `--` (not `0`) / فیلد نامعتبر → `--`
 
 ### game/local_player.rs
 
-**`discover()`** — پیدا کردن Local Player pointer:
-1. ابتدا config RVA
-2. لیست شناخته‌شده (LP_RVA_HW / LP_RVA_CLIENT)
-3. Scan محدود ماژول (0x100000..0x600000)
+**`discover()`** — Find Local Player pointer / پیدا کردن Local Player pointer:
+1. First config RVA
+2. Known list (LP_RVA_HW / LP_RVA_CLIENT)
+3. Module scan (0x100000..0x600000)
 
 **Scoring:** HP range + armor valid + from_known_rva bonus
 
 ### game/position.rs
 
-**۶ استراتژی برای خواندن مختصات:**
+**6 strategies for reading coordinates / ۶ استراتژی برای خواندن مختصات:**
 
-| # | استراتژی | توضیح |
-|---|---------|-------|
-| 1 | `locked_pos_player` | آدرس قفل‌شده از قبل |
-| 2 | `position_global_hw_rva` | vec3 مستقیم در hw.dll |
+| # | Strategy | Description |
+|---|----------|-------------|
+| 1 | `locked_pos_player` | Previously locked address / آدرس قفل‌شده از قبل |
+| 2 | `position_global_hw_rva` | Direct vec3 in hw.dll |
 | 3 | `resolve_hw_local_player_position` | hw entity → pev → origin |
 | 4 | `read_hw_entity_world_origin` | hw entity fallback |
-| 5 | `discovered_*` | کش discovery قبلی |
+| 5 | `discovered_*` | Previous discovery cache / کش discovery قبلی |
 | 6 | `player + offset` | client entity |
 
-**فیلترها:**
-- `looks_like_coords()` — محدوده نقشه
-- `looks_like_world_origin()` — نه view aux
-- `looks_like_spawn_stub()` — رد کردن spawn point
-- `is_usable_position()` — ترکیب همه فیلترها
+**Filters / فیلترها:**
+- `looks_like_coords()` — Map range / محدوده نقشه
+- `looks_like_world_origin()` — Not view aux
+- `looks_like_spawn_stub()` — Reject spawn point / رد کردن spawn point
+- `is_usable_position()` — Combined filter / ترکیب همه فیلترها
 
 ---
 
-## ۶. ماژول overlay/
+## 6. Module overlay/ — Render on Game Window / ماژول overlay/ — رندر روی پنجره بازی
 
 ### overlay/overlay.rs
 
-**OverlayHandle** — مدیریت overlay thread:
+**OverlayHandle** — Overlay thread management / مدیریت overlay thread:
 ```rust
 pub struct OverlayHandle {
     tx: Sender<Cmd>,
@@ -268,11 +267,11 @@ pub struct OverlayHandle {
 }
 ```
 
-**پنجره:** Win32 WS_POPUP + WS_EX_LAYERED + WS_EX_TRANSPARENT + WS_EX_TOPMOST
+**Window:** Win32 WS_POPUP + WS_EX_LAYERED + WS_EX_TRANSPARENT + WS_EX_TOPMOST
 
-**رندر:** GDI — CreateFontW + TextOutW + FillRect
+**Render:** GDI — CreateFontW + TextOutW + FillRect
 
-**مکانیسم repaint:**
+**Repaint mechanism / مکانیسم repaint:**
 ```rust
 fn repaint(hwnd: HWND) {
     unsafe { InvalidateRect(hwnd, None, false); }
@@ -281,29 +280,29 @@ fn repaint(hwnd: HWND) {
 
 **WM_PAINT handler:**
 1. BeginPaint
-2. FillRect با COLORKEY (0xFF00FF — magenta شفاف)
-3. build_lines() → خواندن GameState
-4. draw() → رسم هر خط با رنگ و سایه
+2. FillRect with COLORKEY (0xFF00FF — transparent magenta)
+3. build_lines() → Read GameState / خواندن GameState
+4. draw() → Draw each line with color and shadow / رسم هر خط با رنگ و سایه
 5. EndPaint
 
-**位置 sync:**
-- هر فریم: find_game_window → get_game_rect → SetWindowPos
-- HWND_TOPMOST برای ماندن روی بازی
+**Position sync / sync موقعیت:**
+- Each frame: find_game_window → get_game_rect → SetWindowPos
+- HWND_TOPMOST to stay on top of game / HWND_TOPMOST برای ماندن روی بازی
 
 ---
 
-## ۷. ماژول debug/
+## 7. Module debug/ — Debug Console / ماژول debug/ — کنسول دیباگ
 
-**DebugConsole** — چاپ ANSI در ترمینال:
-- `\x1b[2J\x1b[H` → پاک کردن صفحه
-- اطلاعات: tick, ready, money, clip, reserve, write_enabled, alive
-- Interval قابل تنظیم در config
+**DebugConsole** — ANSI terminal printing / چاپ ANSI در ترمینال:
+- `\x1b[2J\x1b[H` → Clear screen / پاک کردن صفحه
+- Info: tick, ready, money, clip, reserve, write_enabled, alive
+- Configurable interval in config / Interval قابل تنظیم در config
 
 ---
 
-## ۸. ماژول config/
+## 8. Module config/ — Configuration / ماژول config/ — پیکربندی
 
-**`AppConfig`** — ساختار اصلی:
+**`AppConfig`** — Main structure / ساختار اصلی:
 ```rust
 pub struct AppConfig {
     pub process: ProcessConfig,        // name = "hl.exe"
@@ -320,19 +319,19 @@ pub struct AppConfig {
 }
 ```
 
-**`parse_hex_u32()`** → تبدیل "0x7AF55C" به u32
+**`parse_hex_u32()`** → Convert "0x7AF55C" to u32
 
-**`parse_offsets()`** → تبدیل Vec<String> به Vec<u32>
+**`parse_offsets()`** → Convert Vec<String> to Vec<u32>
 
 ---
 
-## ۹. جریان داده
+## 9. Data Flow / جریان داده
 
 ```
 config.toml
     │
     ▼
-AppConfig (parse once)
+AppConfig (parse once / یکبار parse)
     │
     ├──► GameEngine::open()
     │       ├── ProcessHandle::attach()
@@ -341,20 +340,20 @@ AppConfig (parse once)
     │       └── discover_local_player_if_needed()
     │
     ▼
-memory_loop (هر N ms)
+memory_loop (every N ms / هر N ms)
     │
     ├──► eng.tick() → GameState
-    │       ├── read money (3 استراتژی)
-    │       ├── read clip (چند chain)
+    │       ├── read money (3 strategies / ۳ استراتژی)
+    │       ├── read clip (multiple chains / چند chain)
     │       ├── read reserve
     │       ├── read hp/armor
-    │       ├── read position (6 استراتژی)
+    │       ├── read position (6 strategies / ۶ استراتژی)
     │       └── merge_cache → GameState
     │
     ├──► *state.write() = snap
     │
     ▼
-Overlay Thread (هر 16ms)
+Overlay Thread (every 16ms / هر 16ms)
     │
     ├──► state.read() → GameState
     ├──► build_lines() → Vec<Line>
@@ -363,15 +362,15 @@ Overlay Thread (هر 16ms)
 
 ---
 
-## ۱۰. مدیریت state
+## 10. State Management / مدیریت state
 
-**`Arc<RwLock<GameState>>`** — مشترک بین memory + overlay
+**`Arc<RwLock<GameState>>`** — Shared between memory + overlay / مشترک بین memory + overlay
 
 - Memory thread: `*state.write() = snap.clone()`
 - Overlay thread: `state.read()` → `build_lines()` → `draw()`
 - Main thread: `state.read()` → `format_status()` → console
 
-**`Cache`** در GameEngine:
+**`Cache`** in GameEngine:
 ```rust
 struct Cache {
     money: i32, money_valid: bool,
@@ -379,115 +378,115 @@ struct Cache {
     reserve: i32, reserve_valid: bool,
 }
 ```
-- فقط مقدارهای موفق cache می‌شوند
-- tick بد → مقدار قبلی حفظ می‌شود
+- Only successful values are cached / فقط مقدارهای موفق cache می‌شوند
+- Bad tick → previous value preserved / tick بد → مقدار قبلی حفظ می‌شود
 
-**`display_ready`** → یکبار true شد، دیگر false نمی‌شود
+**`display_ready`** → Once true, never false again / یکبار true شد، دیگر false نمی‌شود
 
 ---
 
-## ۱۱. _resolve chain_ — الگوریتم
+## 11. resolve chain — Algorithm / الگوریتم
 
 ```rust
 fn resolve_chain(process, base_ptr, offsets) -> Result<u32> {
     let mut addr = base_ptr;
     for (step, &offset) in offsets.iter().enumerate() {
-        let next = read_u32(addr)?;  // خواندن pointer
+        let next = read_u32(addr)?;  // Read pointer / خواندن pointer
         if next == 0 { return Err(ChainBroken); }
-        addr = next + offset;        // اضافه کردن offset
+        addr = next + offset;        // Add offset / اضافه کردن offset
     }
     Ok(addr)
 }
 ```
 
-**مثال:**
+**Example / مثال:**
 ```
 hw.dll + 0x6E92AC
   → [+0x1CC] → [+0x320] → [+0x4] → [+0x7C] → [+0x21C]
   → Money address
 ```
 
-**هر tick resolve می‌شود** — نه یکبار. این باعث می‌شود بعد از تغییر base دوباره کار کند.
+**Resolved every tick** — not once. This makes it work after base change / هر tick resolve می‌شود — نه یکبار. این باعث می‌شود بعد از تغییر base دوباره کار کند.
 
 ---
 
-## ۱۲. Local Player Discovery
+## 12. Local Player Discovery
 
-**هدف:** پیدا کردن آدرس entity بازیکن فعلی
+**Goal / هدف:** Find current player entity address / پیدا کردن آدرس entity بازیکن فعلی
 
-**روش:**
+**Method / روش:**
 1. config RVA → `hw.dll + rva` → read pointer → player entity
-2. لیست شناخته‌شده RVAها
-3. Scan 0x100000..0x600000 با step=4
+2. Known RVA list / لیست شناخته‌شده RVAها
+3. Scan 0x100000..0x600000 with step=4
 
-**HP verify:** `(0..=100).contains(&hp)` → اگر HP معتبر بود → player درست
+**HP verify:** `(0..=100).contains(&hp)` → If HP valid → correct player / اگر HP معتبر بود → player درست
 
 **Scoring:**
 - from_known_rva: +1000
-- hp_off مطابق config: +500
+- hp_off matches config: +500
 - armor valid: +100
 - hp value: +hp
 
 ---
 
-## ۱۳. Position Discovery
+## 13. Position Discovery
 
-**پیچیده‌ترین بخش** — ۶ استراتژی + فیلترهای متعدد
+**Most complex part / پیچیده‌ترین بخش** — 6 strategies + multiple filters / ۶ استراتژی + فیلترهای متعدد
 
-**فیلترهای vec3:**
-- `looks_like_coords()` — محدوده نقشه (<=16384)
-- `looks_like_world_origin()` — نه view aux، هر دو محور افقی معنی‌دار
-- `looks_like_view_aux()` — الگوی (164, 1, 140)
+**Vec3 filters / فیلترهای vec3:**
+- `looks_like_coords()` — Map range (<=16384) / محدوده نقشه
+- `looks_like_world_origin()` — Not view aux, both horizontal axes meaningful
+- `looks_like_view_aux()` — Pattern (164, 1, 140)
 - `looks_like_spawn_stub()` — (0, 300, 0)
-- `is_usable_position()` — ترکیب نهایی
+- `is_usable_position()` — Final combination / ترکیب نهایی
 
 **Discovery live:**
-1. collect_all_movement_snaps() — نمونه‌گیری اول
+1. collect_all_movement_snaps() — Initial sampling / نمونه‌گیری اول
 2. sleep(wait_ms)
-3. pick_best_mover() — مقایسه دو نمونه
-4. اگر نشد → discover_by_changing_floats()
+3. pick_best_mover() — Compare two samples / مقایسه دو نمونه
+4. If failed → discover_by_changing_floats() / اگر نشد → discover_by_changing_floats()
 
 ---
 
-## ۱۴. Overlay Rendering
+## 14. Overlay Rendering
 
-**رندر GDI ساده:**
-1. `InvalidateRect` → علامت‌گذاری پنجره به عنوان dirty
-2. `PeekMessage` → تولید WM_PAINT
+**Simple GDI render / رندر GDI ساده:**
+1. `InvalidateRect` → Mark window as dirty / علامت‌گذاری پنجره به عنوان dirty
+2. `PeekMessage` → Generate WM_PAINT / تولید WM_PAINT
 3. `wnd_proc(WM_PAINT)`:
    - `BeginPaint` → HDC
-   - `FillRect` با magenta (COLORKEY)
-   - `CreateFontW` → فونت
-   - برای هر خط: `SetTextColor` + `TextOutW` (سایه + اصلی)
-   - `DeleteObject(font)` → آزادسازی
+   - `FillRect` with magenta (COLORKEY)
+   - `CreateFontW` → Font / فونت
+   - For each line: `SetTextColor` + `TextOutW` (shadow + main) / برای هر خط: سایه + اصلی
+   - `DeleteObject(font)` → Cleanup / آزادسازی
 
-**ویژگی‌ها:**
-- لایه شفاف (LWA_COLORKEY)
-- روی همه پنجره‌ها (WS_EX_TOPMOST)
-- بدون تأثیر روی کلیک (WS_EX_TRANSPARENT)
-- بدون taskbar (WS_EX_TOOLWINDOW)
+**Features / ویژگی‌ها:**
+- Transparent layer (LWA_COLORKEY) / لایه شفاف
+- On top of all windows (WS_EX_TOPMOST) / روی همه پنجره‌ها
+- No click impact (WS_EX_TRANSPARENT) / بدون تأثیر روی کلیک
+- No taskbar (WS_EX_TOOLWINDOW) / بدون taskbar
 
 ---
 
-## ۱۵. Window Management
+## 15. Window Management
 
 **`find_game_window(pid)`:**
-1. کلاس `Valve001` (SDK استاندارد)
-2. عنوان: Counter-Strike / Half-Life / Condition Zero
-3. بزرگ‌ترین پنجره visible
+1. Class `Valve001` (standard SDK) / کلاس `Valve001` (SDK استاندارد)
+2. Title: Counter-Strike / Half-Life / Condition Zero
+3. Largest visible window / بزرگ‌ترین پنجره visible
 
 **Cache:** Mutex + TTL 800ms
 
 **`get_game_rect(hwnd)`:**
-1. GetClientRect → ابعاد client area
-2. ClientToScreen → مختصات صفحه
+1. GetClientRect → Client area dimensions / ابعاد client area
+2. ClientToScreen → Screen coordinates / مختصات صفحه
 3. Fallback: GetWindowRect
 
 ---
 
-## ۱۶. Error Handling
+## 16. Error Handling / مدیریت خطا
 
-**`AppError`** — خطاهای سطح بالا:
+**`AppError`** — High-level errors / خطاهای سطح بالا:
 ```rust
 pub enum AppError {
     Config(String),
@@ -496,7 +495,7 @@ pub enum AppError {
 }
 ```
 
-**`MemoryError`** — خطاهای حافظه:
+**`MemoryError`** — Memory errors / خطاهای حافظه:
 ```rust
 pub enum MemoryError {
     ProcessNotFound { name },
@@ -509,21 +508,21 @@ pub enum MemoryError {
 }
 ```
 
-**Reconnect logic:**
+**Reconnect logic / منطق Reconnect:**
 - `should_reconnect()` → !is_alive || !engine_base || stale >= threshold
-- stale counter: هر tick بدون read موفق +1
-- بعد از reconnect: pid_store=0, invalidate_window_cache, state=default
+- Stale counter: +1 each tick without successful read / stale counter: هر tick بدون read موفق +1
+- After reconnect: pid_store=0, invalidate_window_cache, state=default
 
 ---
 
-## ۱۷. وابستگی‌ها
+## 17. Dependencies / وابستگی‌ها
 
-| Crate | نسخه | کاربرد |
-|-------|------|--------|
+| Crate | Version | Purpose / کاربرد |
+|-------|---------|-----------------|
 | `windows` | 0.58 | Win32 API (RPM/WPM, GDI, Window) |
 | `clap` | 4 | CLI argument parsing |
-| `parking_lot` | 0.12 | RwLock سریع‌تر از std |
-| `crossbeam-channel` | 0.5 | ارتباط thread overlay |
+| `parking_lot` | 0.12 | Faster RwLock than std / RwLock سریع‌تر از std |
+| `crossbeam-channel` | 0.5 | Overlay thread communication / ارتباط thread overlay |
 | `tracing` | 0.1 | Logging |
 | `tracing-subscriber` | 0.3 | Console logging |
 | `serde` | 1 | Deserialize config |
@@ -533,54 +532,58 @@ pub enum MemoryError {
 
 ---
 
-## ۱۸. ایمنی حافظه — Safe vs Unsafe
+## 18. Memory Safety — Safe vs Unsafe / ایمنی حافظه
 
-### خلاصه
+### Summary / خلاصه
 
-سورس کامل **unsafe** است. تقریباً همه عملیات حافظه و Win32 API داخل `unsafe` block هستند. فقط wrapperهای Rust دورشون safe هستند.
+The codebase is largely **unsafe**. Almost all memory and Win32 API operations are in `unsafe` blocks. Only Rust wrappers around them are safe.
+<br>سورس کامل **unsafe** است. تقریباً همه عملیات حافظه و Win32 API داخل `unsafe` block هستند. فقط wrapperهای Rust دورشون safe هستند.
 
-### چرا unsafe لازم است؟
+### Why unsafe is needed? / چرا unsafe لازم است؟
 
-CS 1.6 Tool یک **External Memory Tool** است — یعنی از بیرون پروسس بازی حافظه را می‌خواند/می‌نویسد. این کار فقط از طریق Win32 API امکان‌پذیر است و همه Win32 FFI functions در Rust **unsafe** هستند:
+CS 1.6 Tool is an **External Memory Tool** — it reads/writes game process memory from outside. This is only possible through Win32 API, and all Win32 FFI functions are **unsafe** in Rust:
+<br>CS 1.6 Tool یک **External Memory Tool** است — یعنی از بیرون پروسس بازی حافظه را می‌خواند/می‌نویسد. این کار فقط از طریق Win32 API امکان‌پذیر است و همه Win32 FFI functions در Rust **unsafe** هستند:
 
 ```rust
+// unsafe because: FFI call to Windows kernel — no guarantee for valid handle/addr
 // unsafe چون: FFI call به Windows kernel — تضمینی برای valid handle/addr نیست
 ReadProcessMemory(handle, addr, buf, size, None)
 WriteProcessMemory(handle, addr, buf, size, None)
 OpenProcess(permissions, false, pid)
 ```
 
-### نقشه unsafe در کد
+### Unsafe map in code / نقشه unsafe در کد
 
-| فایل | unsafe علت | مثال |
-|------|------------|------|
+| File | Unsafe reason / علت | Example |
+|------|---------------------|---------|
 | `win/memory.rs` | FFI → RPM/WPM | `ReadProcessMemory`, `WriteProcessMemory` |
 | `win/process.rs` | FFI → Process API | `OpenProcess`, `CreateToolhelp32Snapshot`, `Module32FirstW` |
 | `win/window.rs` | FFI → Window API | `EnumWindows`, `FindWindowW`, `GetClientRect` |
 | `overlay/overlay.rs` | FFI → Win32 Window + GDI | `CreateWindowExW`, `TextOutW`, `BeginPaint`, `PeekMessageW` |
-| `game/engine.rs` | غیرمستقیم (از طریق MemoryReader) | — |
-| `game/position.rs` | غیرمستقیم (از طریق MemoryReader) | — |
-| `game/local_player.rs` | غیرمستقیم (از طریق MemoryReader) | — |
+| `game/engine.rs` | Indirect (via MemoryReader) / غیرمستقیم | — |
+| `game/position.rs` | Indirect (via MemoryReader) / غیرمستقیم | — |
+| `game/local_player.rs` | Indirect (via MemoryReader) / غیرمستقیم | — |
 
-### چه بخش‌هایی safe هستند؟
+### What is safe? / چه بخش‌هایی safe هستند؟
 
-| فایل | چرا safe است |
-|------|-------------|
+| File | Why safe / چرا safe است |
+|------|------------------------|
 | `config.rs` | Pure Rust — serde + TOML parse |
 | `error.rs` | Pure Rust — thiserror derive |
 | `game/state.rs` | Pure Rust — data structures + format |
-| `debug/mod.rs` | Pure Rust — println + ANSI |
+| /`debug/mod.rs` | Pure Rust — println + ANSI |
 | `main.rs` | Safe — thread spawn + AtomicBool + channel |
 
-### الگوی ایمنی: Wrapper around unsafe
+### Safety pattern: Wrapper around unsafe / الگوی ایمنی
 
 ```rust
+// unsafe in one place — wrapped in safe API
 // unsafe در یک جا — wrap شده در safe API
 pub fn read_i32(&self, address: u32) -> Result<i32, MemoryError> {
     if address == 0 {
         return Err(MemoryError::InvalidAddress { address });  // validation
     }
-    // unsafe block — فقط اینجا FFI صدا زده می‌شود
+    // unsafe block — only here FFI is called / فقط اینجا FFI صدا زده می‌شود
     let mut buf = MaybeUninit::<T>::uninit();
     let ok = unsafe {
         ReadProcessMemory(self.handle, address as *const _, ...)
@@ -592,9 +595,9 @@ pub fn read_i32(&self, address: u32) -> Result<i32, MemoryError> {
 }
 ```
 
-**مزیت:** `unsafe` فقط در یک جا متمرکز است. بقیه کد (engine, state, overlay logic) از `read_i32()` safe استفاده می‌کند.
+**Advantage / مزیت:** `unsafe` is concentrated in one place. The rest of the code (engine, state, overlay logic) uses `read_i32()` safely.
 
-### RAII برای Handle
+### RAII for Handle
 
 ```rust
 impl Drop for ProcessHandle {
@@ -606,20 +609,19 @@ impl Drop for ProcessHandle {
 }
 ```
 
-handle خودکار بسته می‌شود — leak نمی‌دهد.
+Handle is automatically closed — no leak / handle خودکار بسته می‌شود — leak نمی‌دهد.
 
-### نتیجه‌گیری
+### Conclusion / نتیجه‌گیری
 
-| معیار | وضعیت |
-|-------|--------|
-| آیا کل کد safe است؟ | **نه** |
-| آیا unsafe کنترل‌شده است؟ | **بله** — فقط در win/ و overlay/ |
-| آیا wrapper safe هستند؟ | **بله** — validation + error handling |
-| آیا memory leak دارد؟ | **نه** — RAII برای handleها |
-| آیا undefined behavior دارد؟ | **نه** — unsafe فقط FFI است |
+| Criteria / معیار | Status / وضعیت |
+|------------------|----------------|
+| Is all code safe? / آیا کل کد safe است؟ | **No / نه** |
+| Is unsafe controlled? / آیا unsafe کنترل‌شده است؟ | **Yes** — only in win/ and overlay/ / فقط در win/ و overlay/ |
+| Are wrappers safe? / آیا wrapper safe هستند؟ | **Yes** — validation + error handling |
+| Memory leak? / آیا memory leak دارد؟ | **No / نه** — RAII for handles |
+| Undefined behavior? / آیا undefined behavior دارد؟ | **No / نه** — unsafe is only FFI |
 
 ---
 
-*این مستند مکمل `README.md` و `پیشرفت-CS16.md` است.*
-
-</div>
+*This document complements `README.md` and `CHANGELOG.md`.*
+<br>*این مستند مکمل `README.md` و `CHANGELOG.md` است.*
