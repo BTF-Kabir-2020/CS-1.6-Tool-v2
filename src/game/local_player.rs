@@ -23,7 +23,7 @@ pub struct LocalPlayerDiscovery {
 }
 
 fn read_hp(reader: &MemoryReader, player: u32, hp_off: u32) -> Option<i32> {
-    if player < 0x0100_0000 || player > 0x7FFF_0000 || player & 3 != 0 {
+    if !(0x0100_0000..=0x7FFF_0000).contains(&player) || player & 3 != 0 {
         return None;
     }
     reader

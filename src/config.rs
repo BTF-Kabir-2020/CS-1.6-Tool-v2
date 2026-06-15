@@ -5,9 +5,10 @@ use serde::Deserialize;
 
 use crate::error::AppError;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ValueType {
     Int,
+    #[default]
     Float,
     Byte,
 }
@@ -20,12 +21,6 @@ impl ValueType {
             "byte" | "u8" => Ok(Self::Byte),
             other => Err(AppError::Config(format!("نوع نامعتبر: {other}"))),
         }
-    }
-}
-
-impl Default for ValueType {
-    fn default() -> Self {
-        Self::Float
     }
 }
 

@@ -6,7 +6,7 @@ description = "CS 1.6 external memory tool — educational/research use only. No
 authors = ["CS16 Project"]
 license = "LicenseRef-cs16-non-commercial"
 readme = "README.md"
-rust-version = "1.70"
+rust-version = "1.82"
 default-run = "cs16-tool"
 
 [[bin]]

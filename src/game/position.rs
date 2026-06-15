@@ -113,7 +113,7 @@ fn plausible_for_movement(x: f32, y: f32, z: f32) -> bool {
 }
 
 pub fn peek_vec3(reader: &MemoryReader, base: u32, offset: u32) -> Option<(f32, f32, f32)> {
-    if base < 0x0100_0000 || base > 0x7FFF_0000 {
+    if !(0x0100_0000..=0x7FFF_0000).contains(&base) {
         return None;
     }
     let x = reader.read_f32(base.wrapping_add(offset)).ok()?;
@@ -446,7 +446,7 @@ fn collect_entity_hits(
         let Ok(pev) = reader.read_u32(cand.player.wrapping_add(pev_off)) else {
             continue;
         };
-        if pev < 0x0100_0000 || pev > 0x7FFF_0000 {
+        if !(0x0100_0000..=0x7FFF_0000).contains(&pev) {
             continue;
         }
         for &off in &[0x8u32, 0x14, 0x20, 0x34, 0x38, 0x44] {
@@ -460,7 +460,7 @@ fn collect_entity_hits(
 
     // entvars ممکن است مستقیم در player باشد
     if let Ok(entvars) = reader.read_u32(cand.player) {
-        if entvars >= 0x0100_0000 && entvars <= 0x7FFF_0000 {
+        if (0x0100_0000..=0x7FFF_0000).contains(&entvars) {
             for &off in &[0x8u32, 0x14, 0x20, 0x34] {
                 if let Some(v) = peek_vec3(reader, entvars, off) {
                     if check(v) {
@@ -577,6 +577,7 @@ fn discover_global_movement(
 }
 
 /// entityهای محتمل — hw اول، client stub حذف
+#[allow(clippy::too_many_arguments)]
 pub fn collect_position_candidates(
     reader: &MemoryReader,
     hw_base: u32,
@@ -589,7 +590,7 @@ pub fn collect_position_candidates(
 ) -> Vec<PlayerCandidate> {
     let mut out = Vec::new();
     let mut add = |player: u32, hp_offset: u32, from_hw: bool| {
-        if player < 0x0100_0000 || player > 0x7FFF_0000 || player & 3 != 0 {
+        if !(0x0100_0000..=0x7FFF_0000).contains(&player) || player & 3 != 0 {
             return;
         }
         if out
@@ -714,7 +715,7 @@ fn discover_by_changing_floats(
     scan_size: u32,
     wait_ms: u64,
 ) -> Option<PositionDiscovery> {
-    if base < 0x0100_0000 || base > 0x7FFF_0000 {
+    if !(0x0100_0000..=0x7FFF_0000).contains(&base) {
         return None;
     }
     let mut snap: Vec<(u32, f32)> = Vec::new();
@@ -817,7 +818,7 @@ fn discover_by_velocity(
             let Ok(pev) = reader.read_u32(cand.player.wrapping_add(pev_off)) else {
                 continue;
             };
-            if pev < 0x0100_0000 || pev > 0x7FFF_0000 {
+            if !(0x0100_0000..=0x7FFF_0000).contains(&pev) {
                 continue;
             }
             for off in (0x8..0x400).step_by(4) {
@@ -967,6 +968,7 @@ fn pick_best_mover(
     best.map(|(_, d)| d)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn collect_all_movement_snaps(
     reader: &MemoryReader,
     hw_base: u32,
@@ -1019,7 +1021,7 @@ fn collect_all_movement_snaps(
             let Ok(pev) = reader.read_u32(cand.player.wrapping_add(pev_off)) else {
                 continue;
             };
-            if pev < 0x0100_0000 || pev > 0x7FFF_0000 {
+            if !(0x0100_0000..=0x7FFF_0000).contains(&pev) {
                 continue;
             }
             for off in (0x8..0x400).step_by(4) {
@@ -1136,6 +1138,7 @@ pub fn read_configured_global_position(
 }
 
 /// global → pev → entity → velocity — یک sleep مشترک
+#[allow(clippy::too_many_arguments)]
 pub fn discover_position_live(
     reader: &MemoryReader,
     hw_base: u32,
@@ -1288,6 +1291,7 @@ fn fallback_static(
 }
 
 /// dump: movement + fallback static (فقط برای پیشنهاد)
+#[allow(clippy::too_many_arguments)]
 pub fn discover_player_and_offset(
     reader: &MemoryReader,
     hw_base: u32,

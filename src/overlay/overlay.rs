@@ -277,7 +277,7 @@ unsafe extern "system" fn wnd_proc(
                     draw(hdc, &shared, rect.right, rect.bottom);
                 }
             }
-            let _ = EndPaint(hwnd, &mut ps);
+            let _ = EndPaint(hwnd, &ps);
             LRESULT(0)
         }
         WM_DESTROY => {

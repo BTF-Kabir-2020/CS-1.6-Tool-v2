@@ -242,7 +242,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     for (name, off) in MONEY_CANDIDATES {
         let addr = entity_player.wrapping_add(*off);
         let i = reader.read_i32(addr).unwrap_or(-999);
-        let mark = if i >= 0 && i <= 16000 { "★" } else { " " };
+        let mark = if (0..=16000).contains(&i) { "★" } else { " " };
         println!("  {mark} {name} +{off:#x} @ {addr:#010x}  int={i}");
     }
     println!();
@@ -442,7 +442,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             let Ok(player) = reader.read_u32(ptr_addr) else {
                 continue;
             };
-            if player < 0x01000000 || player > 0x7FFF0000 || player & 3 != 0 {
+            if !(0x01000000..=0x7FFF0000).contains(&player) || player & 3 != 0 {
                 continue;
             }
             let Ok(hp) = reader.read_i32(player.wrapping_add(0xB74)) else {
@@ -482,7 +482,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             let Ok(player) = reader.read_u32(ptr_addr) else {
                 continue;
             };
-            if player < 0x01000000 || player > 0x7FFF0000 || player & 3 != 0 {
+            if !(0x01000000..=0x7FFF0000).contains(&player) || player & 3 != 0 {
                 continue;
             }
             for &hp_off in &[0xB74u32, 0xFC, 0x100, 0x334, 0x59C] {
@@ -528,7 +528,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             let Ok(player) = reader.read_u32(ptr_addr) else {
                 continue;
             };
-            if player < 0x01000000 || player > 0x7FFF0000 || player & 3 != 0 {
+            if !(0x01000000..=0x7FFF0000).contains(&player) || player & 3 != 0 {
                 continue;
             }
             for &hp_off in &[0x14u32, 0xB74, 0xFC, 0x100] {

@@ -268,14 +268,14 @@ impl GameEngine {
         // health_direct − hp_off — همان CE player_health_from_base
         if self.entity.health_direct != 0 {
             let player = self.entity.health_direct.wrapping_sub(hp_off);
-            if player != 0 && (player & 3) == 0 {
-                if reader
+            if player != 0
+                && (player & 3) == 0
+                && reader
                     .read_i32(self.entity.health_direct)
                     .ok()
                     .is_some_and(|hp| (0..=100).contains(&hp))
-                {
-                    return player;
-                }
+            {
+                return player;
             }
         }
 
@@ -412,9 +412,6 @@ impl GameEngine {
         let (reserve, reserve_ok) =
             self.read_reserve(&reader, &writer, write && alive, &feats, targets.reserve);
         self.last_resolved.reserve_addr = self.reserve_addr;
-
-        drop(reader);
-        drop(writer);
 
         let pos_reader = MemoryReader::new(&self.process);
         let expected_hp = if self.entity.health_direct != 0 {
@@ -851,9 +848,9 @@ impl GameEngine {
             if !self.cache.clip_valid && !self.cache.reserve_valid {
                 return false;
             }
-        } else if feats.clip_enabled && !self.cache.clip_valid {
-            return false;
-        } else if feats.reserve_enabled && !self.cache.reserve_valid {
+        } else if (feats.clip_enabled && !self.cache.clip_valid)
+            || (feats.reserve_enabled && !self.cache.reserve_valid)
+        {
             return false;
         }
         true
@@ -928,6 +925,7 @@ fn parse_entity_addrs(entity: &crate::config::EntityConfig, client_base: u32) ->
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn read_position_values(
     reader: &MemoryReader,
     player: u32,
