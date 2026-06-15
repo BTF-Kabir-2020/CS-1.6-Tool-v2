@@ -375,9 +375,16 @@ impl Default for DebugConsoleConfig {
 }
 
 impl AppConfig {
+    const EMBEDDED: &'static str = include_str!("../config.toml");
+
     pub fn load(path: impl AsRef<Path>) -> Result<Self, AppError> {
-        let text = fs::read_to_string(path.as_ref())
-            .map_err(|e| AppError::Config(format!("خواندن config: {e}")))?;
+        let text = if path.as_ref().exists() {
+            fs::read_to_string(path.as_ref())
+                .map_err(|e| AppError::Config(format!("خواندن config: {e}")))?
+        } else {
+            eprintln!("config.toml پیدا نشد — از نسخه پیش‌فرض استفاده می‌شود");
+            Self::EMBEDDED.to_string()
+        };
         let cfg: Self =
             toml::from_str(&text).map_err(|e| AppError::Config(format!("parse: {e}")))?;
         cfg.validate()?;
