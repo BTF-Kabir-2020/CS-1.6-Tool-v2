@@ -33,6 +33,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Clippy lints
+        run: cargo clippy --all-targets -- -D warnings
+
       - name: Build release
         run: cargo build --release --all-targets
 
