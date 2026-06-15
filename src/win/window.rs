@@ -187,7 +187,10 @@ fn by_class(pid: u32, class: &str) -> Option<isize> {
 }
 
 fn by_title(pid: u32, title: &str) -> Option<isize> {
-    let wide = title.encode_utf16().chain(std::iter::once(0)).collect::<Vec<_>>();
+    let wide = title
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect::<Vec<_>>();
     let hwnd = unsafe { FindWindowW(PCWSTR::null(), PCWSTR(wide.as_ptr())) }.ok()?;
     if hwnd.0.is_null() {
         return None;

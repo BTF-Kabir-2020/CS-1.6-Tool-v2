@@ -117,9 +117,7 @@ impl GameEngine {
 
     /// همان بلوک startup در 1_cs16: resolve money + reserve یک‌بار
     fn resolve_static_addresses(&mut self) {
-        self.money_hw_addr = self
-            .try_resolve_money_hw()
-            .unwrap_or(0);
+        self.money_hw_addr = self.try_resolve_money_hw().unwrap_or(0);
         self.reserve_addr = self.pick_reserve_addr();
         self.client_money_addr = if self.client_base != 0 {
             parse_hex_u32(&self.config.chains.money_client_fallback.direct_rva)
@@ -315,23 +313,13 @@ impl GameEngine {
         let Ok(offsets) = parse_offsets(&chain.offsets) else {
             return 0;
         };
-        resolve_chain(
-            &self.process,
-            self.hw_base.wrapping_add(rva),
-            &offsets,
-        )
-        .unwrap_or(0)
+        resolve_chain(&self.process, self.hw_base.wrapping_add(rva), &offsets).unwrap_or(0)
     }
 
     fn resolve_chain_addr(&self, chain: &crate::config::PointerChainConfig) -> Option<u32> {
         let rva = parse_hex_u32(&chain.base_rva).ok()?;
         let offsets = parse_offsets(&chain.offsets).ok()?;
-        resolve_chain(
-            &self.process,
-            self.hw_base.wrapping_add(rva),
-            &offsets,
-        )
-        .ok()
+        resolve_chain(&self.process, self.hw_base.wrapping_add(rva), &offsets).ok()
     }
 
     fn clip_chain_indices(&self) -> impl Iterator<Item = usize> + '_ {
@@ -417,22 +405,12 @@ impl GameEngine {
             self.client_money_addr
         };
 
-        let (clip, clip_ok, clip_addr) = self.read_clip(
-            &reader,
-            &writer,
-            write && alive,
-            &feats,
-            targets.clip,
-        );
+        let (clip, clip_ok, clip_addr) =
+            self.read_clip(&reader, &writer, write && alive, &feats, targets.clip);
         self.last_resolved.clip_addr = clip_addr;
 
-        let (reserve, reserve_ok) = self.read_reserve(
-            &reader,
-            &writer,
-            write && alive,
-            &feats,
-            targets.reserve,
-        );
+        let (reserve, reserve_ok) =
+            self.read_reserve(&reader, &writer, write && alive, &feats, targets.reserve);
         self.last_resolved.reserve_addr = self.reserve_addr;
 
         drop(reader);
@@ -481,10 +459,7 @@ impl GameEngine {
         if let Some(p) = new_pos_player {
             if self.locked_pos_player == 0 {
                 self.locked_pos_player = p;
-                tracing::info!(
-                    "position locked: {p:#x}+{}",
-                    self.locked_pos_off
-                );
+                tracing::info!("position locked: {p:#x}+{}", self.locked_pos_off);
             } else if p != self.discovered_pos_player {
                 self.discovered_pos_player = p;
                 tracing::info!("position entity: {p:#x}");
@@ -528,12 +503,7 @@ impl GameEngine {
             0
         };
 
-        let got_data = money_ok
-            || clip_ok
-            || reserve_ok
-            || hp_on
-            || armor_on
-            || pos_on;
+        let got_data = money_ok || clip_ok || reserve_ok || hp_on || armor_on || pos_on;
 
         if got_data {
             self.stale = 0;
@@ -615,7 +585,6 @@ impl GameEngine {
         }
     }
 
-
     fn read_money(
         &self,
         reader: &MemoryReader,
@@ -662,11 +631,7 @@ impl GameEngine {
             .map_err(|_| MemoryError::InvalidAddress { address: 0 })?;
         let offsets = parse_offsets(&self.config.chains.money_hw.offsets)
             .map_err(|_| MemoryError::InvalidAddress { address: 0 })?;
-        resolve_chain(
-            &self.process,
-            self.hw_base.wrapping_add(rva),
-            &offsets,
-        )
+        resolve_chain(&self.process, self.hw_base.wrapping_add(rva), &offsets)
     }
 
     fn try_resolve_reserve(&self) -> Result<u32, MemoryError> {
@@ -674,11 +639,7 @@ impl GameEngine {
             .map_err(|_| MemoryError::InvalidAddress { address: 0 })?;
         let offsets = parse_offsets(&self.config.chains.reserve.offsets)
             .map_err(|_| MemoryError::InvalidAddress { address: 0 })?;
-        resolve_chain(
-            &self.process,
-            self.hw_base.wrapping_add(rva),
-            &offsets,
-        )
+        resolve_chain(&self.process, self.hw_base.wrapping_add(rva), &offsets)
     }
 
     fn read_reserve(
@@ -736,7 +697,8 @@ impl GameEngine {
             let Ok(val) = reader.read_i32(addr) else {
                 continue;
             };
-            if val >= range.min_value && val < range.max_value && (best_addr == 0 || val > best_val) {
+            if val >= range.min_value && val < range.max_value && (best_addr == 0 || val > best_val)
+            {
                 best_val = val;
                 best_addr = addr;
             }
@@ -777,11 +739,7 @@ impl GameEngine {
         (shown, true, best_addr)
     }
 
-    fn read_vitals(
-        &self,
-        reader: &MemoryReader,
-        player: u32,
-    ) -> (f32, f32, bool, bool, bool) {
+    fn read_vitals(&self, reader: &MemoryReader, player: u32) -> (f32, f32, bool, bool, bool) {
         let feats = &self.config.features;
         let mut hp = 0.0f32;
         let mut armor = 0.0f32;
@@ -790,7 +748,8 @@ impl GameEngine {
 
         if feats.hp_enabled {
             if self.entity.health_direct != 0 {
-                if let Ok(v) = read_typed(reader, self.entity.health_direct, self.entity.health_type)
+                if let Ok(v) =
+                    read_typed(reader, self.entity.health_direct, self.entity.health_type)
                 {
                     if (0.0..=100.0).contains(&v) {
                         hp_on = true;
@@ -1003,17 +962,8 @@ fn read_position_values(
 
     // 2) hw global RVA — primary (dump: hw+0x7CD13C offset 0)
     if let Some(rva) = entity.position_global_hw_rva {
-        if let Some((disc, (x, y, z))) =
-            position::read_global_world_at_rva(reader, hw_base, rva)
-        {
-            return (
-                x,
-                y,
-                z,
-                true,
-                Some(disc.offset),
-                Some(disc.player),
-            );
+        if let Some((disc, (x, y, z))) = position::read_global_world_at_rva(reader, hw_base, rva) {
+            return (x, y, z, true, Some(disc.offset), Some(disc.player));
         }
     }
 
@@ -1025,14 +975,7 @@ fn read_position_values(
         config_off,
         None,
     ) {
-        return (
-            x,
-            y,
-            z,
-            true,
-            Some(found.offset),
-            Some(found.player),
-        );
+        return (x, y, z, true, Some(found.offset), Some(found.player));
     }
 
     // 4) hw entity fallback (بدون HP verify)
@@ -1040,14 +983,7 @@ fn read_position_values(
         position::read_hw_entity_world_origin(reader, hw_base, entity.position_entity_hw_rva)
     {
         if let Some((x, y, z)) = try_read(found.player, found.offset) {
-            return (
-                x,
-                y,
-                z,
-                true,
-                Some(found.offset),
-                Some(found.player),
-            );
+            return (x, y, z, true, Some(found.offset), Some(found.player));
         }
     }
 
@@ -1094,14 +1030,7 @@ fn read_position_values(
             None,
         ) {
             if let Some((x, y, z)) = try_read(found.player, found.offset) {
-                return (
-                    x,
-                    y,
-                    z,
-                    true,
-                    Some(found.offset),
-                    Some(found.player),
-                );
+                return (x, y, z, true, Some(found.offset), Some(found.player));
             }
         }
     }

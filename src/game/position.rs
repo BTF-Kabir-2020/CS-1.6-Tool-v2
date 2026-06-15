@@ -10,23 +10,14 @@ use crate::win::memory::MemoryReader;
 /// offsetهای شناخته‌شده m_vecOrigin / entvars.origin در buildهای مختلف GoldSrc
 pub const POS_OFFSET_CANDIDATES: &[u32] = &[
     0x8, 0x14, 0x20, // entvars: origin, oldorigin, velocity
-    0x34, 0x38, 0x3C, 0x40, 0x44, 0x48,
-    0x128, 0x12C, 0x130,
-    0x134,
-    0x138, 0x13C, 0x140,
-    0x1A4, 0x204, 0x334,
+    0x34, 0x38, 0x3C, 0x40, 0x44, 0x48, 0x128, 0x12C, 0x130, 0x134, 0x138, 0x13C, 0x140, 0x1A4,
+    0x204, 0x334,
 ];
 
 const HP_OFFS_HW: &[u32] = &[0x59C, 0x334, 0x100, 0xB74, 0xFC, 0x14];
 
 /// hw.dll RVAs — world entity (اولویت با 0x169438)
-const LP_RVA_HW_FOR_POS: &[u32] = &[
-    0x00169438,
-    0x0010FC80,
-    0x00176C68,
-    0x001694F0,
-    0x0013FDF4,
-];
+const LP_RVA_HW_FOR_POS: &[u32] = &[0x00169438, 0x0010FC80, 0x00176C68, 0x001694F0, 0x0013FDF4];
 
 /// vec3 مستقیم در hw.dll — buildهای شناخته‌شده (مثلاً 8684: EntityOrigin)
 const GLOBAL_ORIGIN_RVA_HW: &[u32] = &[
@@ -38,10 +29,7 @@ const GLOBAL_ORIGIN_RVA_HW: &[u32] = &[
 ];
 
 /// vec3 مستقیم در client.dll — LocalOrigin و مشابه
-const GLOBAL_ORIGIN_RVA_CLIENT: &[u32] = &[
-    0x0013E7F0,
-    0x0012D9F0,
-];
+const GLOBAL_ORIGIN_RVA_CLIENT: &[u32] = &[0x0013E7F0, 0x0012D9F0];
 
 pub struct PositionDiscovery {
     /// پایه vec3 — entity یا آدرس سراسری
@@ -93,7 +81,9 @@ fn looks_like_velocity(x: f32, y: f32, z: f32) -> bool {
 }
 
 /// edict→entvars (pev) در buildهای مختلف
-const PEV_PTR_OFFS: &[u32] = &[0x0, 0x4, 0x8, 0xC, 0x10, 0x14, 0x18, 0x1C, 0x20, 0x24, 0x28, 0x2C];
+const PEV_PTR_OFFS: &[u32] = &[
+    0x0, 0x4, 0x8, 0xC, 0x10, 0x14, 0x18, 0x1C, 0x20, 0x24, 0x28, 0x2C,
+];
 
 /// شمارش معکوس آماده‌سازی — بعدش بلافاصله نمونه‌گیری شروع می‌شود
 pub fn prepare_walk_test(prep_secs: u32) {
@@ -217,11 +207,7 @@ fn is_runtime_world_xyz(x: f32, y: f32, z: f32) -> bool {
     is_usable_position(x, y, z) && !looks_like_view_aux(x, y, z)
 }
 
-fn peek_runtime_world(
-    reader: &MemoryReader,
-    base: u32,
-    offset: u32,
-) -> Option<(f32, f32, f32)> {
+fn peek_runtime_world(reader: &MemoryReader, base: u32, offset: u32) -> Option<(f32, f32, f32)> {
     peek_vec3(reader, base, offset).filter(|&(x, y, z)| is_runtime_world_xyz(x, y, z))
 }
 
@@ -285,14 +271,7 @@ pub fn resolve_hw_local_player_position(
             hp_offset: hoff,
             from_hw: true,
         };
-        for (base, off) in collect_entity_hits(
-            reader,
-            cand,
-            config_off,
-            expected_hp,
-            true,
-            false,
-        ) {
+        for (base, off) in collect_entity_hits(reader, cand, config_off, expected_hp, true, false) {
             let bonus = if base == entity { 200 } else { 800 };
             consider(base, off, bonus);
         }
@@ -408,12 +387,7 @@ fn score_offset(offset: u32, config_off: u32) -> i32 {
     score
 }
 
-fn hp_matches(
-    reader: &MemoryReader,
-    player: u32,
-    hp_off: u32,
-    expected: Option<i32>,
-) -> bool {
+fn hp_matches(reader: &MemoryReader, player: u32, hp_off: u32, expected: Option<i32>) -> bool {
     let Ok(hp) = reader.read_i32(player.wrapping_add(hp_off)) else {
         return false;
     };
@@ -569,7 +543,9 @@ fn discover_global_movement(
 ) -> Option<PositionDiscovery> {
     let mut snaps: Vec<(u32, (f32, f32, f32))> = Vec::new();
     for &base in bases {
-        if let Some(v) = peek_vec3(reader, base, 0).filter(|&(x, y, z)| plausible_for_movement(x, y, z)) {
+        if let Some(v) =
+            peek_vec3(reader, base, 0).filter(|&(x, y, z)| plausible_for_movement(x, y, z))
+        {
             snaps.push((base, v));
         }
     }
@@ -587,7 +563,13 @@ fn discover_global_movement(
         let d = pos_delta_sq(v0, v1);
         if let Some(score) = score_movement_delta(v0, v1, d, 0, 0) {
             if best.as_ref().map(|(bd, _)| score > *bd).unwrap_or(true) {
-                best = Some((score, PositionDiscovery { player: base, offset: 0 }));
+                best = Some((
+                    score,
+                    PositionDiscovery {
+                        player: base,
+                        offset: 0,
+                    },
+                ));
             }
         }
     }
@@ -610,7 +592,10 @@ pub fn collect_position_candidates(
         if player < 0x0100_0000 || player > 0x7FFF_0000 || player & 3 != 0 {
             return;
         }
-        if out.iter().any(|c: &PlayerCandidate| c.player == player && c.hp_offset == hp_offset) {
+        if out
+            .iter()
+            .any(|c: &PlayerCandidate| c.player == player && c.hp_offset == hp_offset)
+        {
             return;
         }
         out.push(PlayerCandidate {
@@ -772,7 +757,11 @@ fn discover_by_changing_floats(
         if looks_like_spawn_stub(v1.0, v1.1, v1.2) {
             continue;
         }
-        let v0x = snap.iter().find(|(o, _)| *o == off).map(|(_, v)| *v).unwrap_or(0.0);
+        let v0x = snap
+            .iter()
+            .find(|(o, _)| *o == off)
+            .map(|(_, v)| *v)
+            .unwrap_or(0.0);
         let v0y = snap
             .iter()
             .find(|(o, _)| *o == off + 4)
@@ -817,9 +806,9 @@ fn discover_by_velocity(
         let bases = [cand.player];
         for &base in &bases {
             for off in (0x8..0x800).step_by(4) {
-                if let Some(v) = peek_vec3(reader, base, off).filter(|&(x, y, z)| {
-                    looks_like_velocity(x, y, z)
-                }) {
+                if let Some(v) =
+                    peek_vec3(reader, base, off).filter(|&(x, y, z)| looks_like_velocity(x, y, z))
+                {
                     snaps.push((base, off, v));
                 }
             }
@@ -832,9 +821,9 @@ fn discover_by_velocity(
                 continue;
             }
             for off in (0x8..0x400).step_by(4) {
-                if let Some(v) = peek_vec3(reader, pev, off).filter(|&(x, y, z)| {
-                    looks_like_velocity(x, y, z)
-                }) {
+                if let Some(v) =
+                    peek_vec3(reader, pev, off).filter(|&(x, y, z)| looks_like_velocity(x, y, z))
+                {
                     snaps.push((pev, off, v));
                 }
             }
@@ -901,7 +890,8 @@ pub fn scan_module_globals_for_movement(
             if !valid_ptr(base) {
                 continue;
             }
-            if let Some(v) = peek_vec3(reader, base, 0).filter(|&(x, y, z)| snap_filter_vec3(x, y, z))
+            if let Some(v) =
+                peek_vec3(reader, base, 0).filter(|&(x, y, z)| snap_filter_vec3(x, y, z))
             {
                 if !snaps.iter().any(|(b, _)| *b == base) {
                     snaps.push((base, v));
@@ -925,7 +915,13 @@ pub fn scan_module_globals_for_movement(
         let d = pos_delta_sq(v0, v1);
         if let Some(score) = score_movement_delta(v0, v1, d, 0, 0) {
             if best.as_ref().map(|(bd, _)| score > *bd).unwrap_or(true) {
-                best = Some((score, PositionDiscovery { player: base, offset: 0 }));
+                best = Some((
+                    score,
+                    PositionDiscovery {
+                        player: base,
+                        offset: 0,
+                    },
+                ));
             }
         }
     }
@@ -983,9 +979,9 @@ fn collect_all_movement_snaps(
 ) -> Vec<(u32, u32, (f32, f32, f32))> {
     let mut snaps = Vec::new();
     let mut push = |player: u32, off: u32| {
-        if let Some(v) = peek_vec3(reader, player, off).filter(|&(x, y, z)| {
-            snap_filter_vec3(x, y, z) && !looks_like_spawn_stub(x, y, z)
-        }) {
+        if let Some(v) = peek_vec3(reader, player, off)
+            .filter(|&(x, y, z)| snap_filter_vec3(x, y, z) && !looks_like_spawn_stub(x, y, z))
+        {
             if !snaps.iter().any(|&(p, o, _)| p == player && o == off) {
                 snaps.push((player, off, v));
             }
@@ -1003,8 +999,7 @@ fn collect_all_movement_snaps(
     }
 
     for &cand in candidates {
-        for (player, off) in
-            collect_entity_hits(reader, cand, config_off, expected_hp, true, true)
+        for (player, off) in collect_entity_hits(reader, cand, config_off, expected_hp, true, true)
         {
             push(player, off);
         }
@@ -1012,9 +1007,9 @@ fn collect_all_movement_snaps(
             continue;
         }
         for off in (0x8..0x800).step_by(4) {
-            if let Some(v) = peek_vec3(reader, cand.player, off).filter(|&(x, y, z)| {
-                looks_like_velocity(x, y, z)
-            }) {
+            if let Some(v) = peek_vec3(reader, cand.player, off)
+                .filter(|&(x, y, z)| looks_like_velocity(x, y, z))
+            {
                 let origin_off = off.saturating_sub(0x18);
                 push(cand.player, origin_off);
                 let _ = v;
@@ -1028,8 +1023,7 @@ fn collect_all_movement_snaps(
                 continue;
             }
             for off in (0x8..0x400).step_by(4) {
-                if peek_vec3(reader, pev, off)
-                    .is_some_and(|(x, y, z)| looks_like_velocity(x, y, z))
+                if peek_vec3(reader, pev, off).is_some_and(|(x, y, z)| looks_like_velocity(x, y, z))
                 {
                     push(pev, off.saturating_sub(0x18));
                 }

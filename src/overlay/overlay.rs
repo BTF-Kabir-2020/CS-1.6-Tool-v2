@@ -9,18 +9,18 @@ use parking_lot::RwLock;
 use windows::core::PCWSTR;
 use windows::Win32::Foundation::{COLORREF, HINSTANCE, HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::Graphics::Gdi::{
-    BeginPaint, CreateFontW, CreateSolidBrush, DeleteObject, EndPaint, FillRect, GetTextExtentPoint32W,
-    InvalidateRect, SelectObject, SetBkMode, SetTextColor, TextOutW, TRANSPARENT, HGDIOBJ, HFONT, PAINTSTRUCT,
+    BeginPaint, CreateFontW, CreateSolidBrush, DeleteObject, EndPaint, FillRect,
+    GetTextExtentPoint32W, InvalidateRect, SelectObject, SetBkMode, SetTextColor, TextOutW, HFONT,
+    HGDIOBJ, PAINTSTRUCT, TRANSPARENT,
 };
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, 
-    LoadCursorW, PostQuitMessage, RegisterClassW, SetLayeredWindowAttributes,
-    SetWindowPos, ShowWindow, TranslateMessage,
-    CS_HREDRAW, CS_VREDRAW, HWND_TOPMOST, IDC_ARROW, LWA_COLORKEY, MSG,
-    SWP_NOACTIVATE, SWP_SHOWWINDOW, SW_HIDE, SW_SHOW, WM_DESTROY, WM_PAINT, WM_QUIT, WINDOW_EX_STYLE,
-    WINDOW_STYLE, WNDCLASSW, WS_EX_LAYERED, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_EX_TRANSPARENT,
-    WS_POPUP, SWP_NOMOVE, SWP_NOSIZE,
+    CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, LoadCursorW, PostQuitMessage,
+    RegisterClassW, SetLayeredWindowAttributes, SetWindowPos, ShowWindow, TranslateMessage,
+    CS_HREDRAW, CS_VREDRAW, HWND_TOPMOST, IDC_ARROW, LWA_COLORKEY, MSG, SWP_NOACTIVATE, SWP_NOMOVE,
+    SWP_NOSIZE, SWP_SHOWWINDOW, SW_HIDE, SW_SHOW, WINDOW_EX_STYLE, WINDOW_STYLE, WM_DESTROY,
+    WM_PAINT, WM_QUIT, WNDCLASSW, WS_EX_LAYERED, WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
+    WS_EX_TRANSPARENT, WS_POPUP,
 };
 
 use crate::config::{parse_color, OverlayConfig, OverlayPosition};
@@ -121,14 +121,14 @@ fn run(
         while let Ok(cmd) = rx.try_recv() {
             match cmd {
                 Cmd::Shutdown => {
-                    unsafe { let _ = DestroyWindow(hwnd); }
+                    unsafe {
+                        let _ = DestroyWindow(hwnd);
+                    }
                     return;
                 }
                 Cmd::Visible(v) => {
                     ctx.write().visible = v;
-                    let _ = unsafe {
-                        ShowWindow(hwnd, if v { SW_SHOW } else { SW_HIDE })
-                    };
+                    let _ = unsafe { ShowWindow(hwnd, if v { SW_SHOW } else { SW_HIDE }) };
                 }
             }
         }
@@ -381,12 +381,7 @@ fn build_lines(ctx: &PaintCtx) -> Vec<Line> {
     lines
 }
 
-fn draw(
-    hdc: windows::Win32::Graphics::Gdi::HDC,
-    ctx: &PaintCtx,
-    cw: i32,
-    ch: i32,
-) {
+fn draw(hdc: windows::Win32::Graphics::Gdi::HDC, ctx: &PaintCtx, cw: i32, ch: i32) {
     let lines = build_lines(ctx);
     if lines.is_empty() || cw <= 0 || ch <= 0 {
         return;
@@ -455,7 +450,3 @@ fn draw(
 fn wide(s: &str) -> Vec<u16> {
     s.encode_utf16().chain(std::iter::once(0)).collect()
 }
-
-
-
-

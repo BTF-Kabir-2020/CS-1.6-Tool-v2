@@ -6,10 +6,7 @@ const LP_RVA_HW: &[u32] = &[
     0x0010FC80, // non-Steam dump: HP=100 + world coords
     0x0012D6F4, // E:\games\gamecs\ non-Steam (dump verified)
     0x0032ABF4, // BLASTHACK / Steam 8684
-    0x0013FDF4,
-    0x00827484,
-    0x0051FA44,
-    0x007028FC,
+    0x0013FDF4, 0x00827484, 0x0051FA44, 0x007028FC,
 ];
 
 const LP_RVA_CLIENT: &[u32] = &[

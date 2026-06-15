@@ -113,7 +113,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         if !debug_on.load(Ordering::SeqCst) {
-            let line = state.read().format_status(&cs16_tool_v2::game::StatusDisplay::all());
+            let line = state
+                .read()
+                .format_status(&cs16_tool_v2::game::StatusDisplay::all());
             print!("\r{line}   ");
             let _ = std::io::stdout().flush();
         }
@@ -211,15 +213,17 @@ fn banner(cfg: &AppConfig) {
     );
     println!(
         "║  💰{}  🔫{}/{}  ❤read  🛡read           ║",
-        cfg.targets.money,
-        cfg.targets.clip,
-        cfg.targets.reserve,
+        cfg.targets.money, cfg.targets.clip, cfg.targets.reserve,
     );
     println!("╚══════════════════════════════════════════╝");
 }
 
 fn on(v: bool) -> &'static str {
-    if v { "ON " } else { "OFF" }
+    if v {
+        "ON "
+    } else {
+        "OFF"
+    }
 }
 
 fn pause() {

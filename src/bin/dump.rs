@@ -29,14 +29,10 @@ const HEALTH_CANDIDATES: &[(&str, u32)] = &[
     ("m_iHealth alt", 0xFC),
     ("m_iClientHealth", 0x59C),
 ];
-const ARMOR_CANDIDATES: &[(&str, u32)] = &[
-    ("m_dwArmor (BLASTHACK)", 0x10C),
-    ("m_iArmor alt", 0x100),
-];
-const MONEY_CANDIDATES: &[(&str, u32)] = &[
-    ("m_dwMoney (BLASTHACK)", 0xE4),
-    ("m_iAccount alt", 0x94),
-];
+const ARMOR_CANDIDATES: &[(&str, u32)] =
+    &[("m_dwArmor (BLASTHACK)", 0x10C), ("m_iArmor alt", 0x100)];
+const MONEY_CANDIDATES: &[(&str, u32)] =
+    &[("m_dwMoney (BLASTHACK)", 0xE4), ("m_iAccount alt", 0x94)];
 
 fn main() {
     if let Err(e) = run() {
@@ -111,12 +107,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         if client_base != 0 {
             let addr = client_base.wrapping_add(rva);
             match reader.read_i32(addr) {
-                Ok(v) => println!(
-                    "  ✓ money_client_fallback @ {addr:#010x} (client+{rva:#x}) = {v}"
-                ),
-                Err(_) => println!(
-                    "  ✗ money_client_fallback @ {addr:#010x} — read failed"
-                ),
+                Ok(v) => {
+                    println!("  ✓ money_client_fallback @ {addr:#010x} (client+{rva:#x}) = {v}")
+                }
+                Err(_) => println!("  ✗ money_client_fallback @ {addr:#010x} — read failed"),
             }
         }
     }
@@ -128,7 +122,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut best_label = String::new();
 
     for (label, rva_str) in LOCAL_PLAYER_CANDIDATES {
-        let Ok(rva) = parse_hex_u32(rva_str) else { continue };
+        let Ok(rva) = parse_hex_u32(rva_str) else {
+            continue;
+        };
         let (base, mod_name) = if label.starts_with("client") {
             (client_base, "client")
         } else {
@@ -157,11 +153,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .entity
         .local_player_module
         .eq_ignore_ascii_case("client");
-    let cfg_lp_module_base = if on_client_cfg {
-        client_base
-    } else {
-        hw_base
-    };
+    let cfg_lp_module_base = if on_client_cfg { client_base } else { hw_base };
     let cfg_lp_tag = if on_client_cfg { "client" } else { "hw" };
     let mut cfg_entity_player = 0u32;
 
@@ -239,9 +231,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         let i = reader.read_i32(addr).unwrap_or(-999);
         let f = reader.read_f32(addr).unwrap_or(f32::NAN);
         let mark = if (1..=100).contains(&i) { "★" } else { " " };
-        println!(
-            "  {mark} {name} +{off:#x} @ {addr:#010x}  int={i}  float={f:.2}"
-        );
+        println!("  {mark} {name} +{off:#x} @ {addr:#010x}  int={i}  float={f:.2}");
     }
     for (name, off) in ARMOR_CANDIDATES {
         let addr = entity_player.wrapping_add(*off);
@@ -317,18 +307,13 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     );
     for c in &pos_candidates {
         let tag = if c.from_hw { "hw" } else { "client" };
-        println!(
-            "    {tag} player={:#010x} HP+{:#x}",
-            c.player, c.hp_offset
-        );
+        println!("    {tag} player={:#010x} HP+{:#x}", c.player, c.hp_offset);
     }
     if let Some(rva) = view_client_rva {
         if let Some((h, mx, my)) =
             cs16_tool_v2::game::read_view_aux(&reader, client_base, Some(rva))
         {
-            println!(
-                "  view client+{rva:#x} → H={h:.1} Mx={mx:.1} My={my:.1}  (NOT map XYZ)"
-            );
+            println!("  view client+{rva:#x} → H={h:.1} Mx={mx:.1} My={my:.1}  (NOT map XYZ)");
         }
     }
 
@@ -344,8 +329,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         pos_global_hw_rva,
         pos_global_client_rva,
     ) {
-        if let Some((x, y, z)) =
-            cs16_tool_v2::game::peek_vec3(&reader, found.player, found.offset)
+        if let Some((x, y, z)) = cs16_tool_v2::game::peek_vec3(&reader, found.player, found.offset)
         {
             let kind = if cs16_tool_v2::game::looks_like_view_aux(x, y, z) {
                 "view/camera (NOT map)"
@@ -391,9 +375,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 2048,
             ) {
                 let rva = found.player.wrapping_sub(hw_base);
-                if let Some((x, y, z)) =
-                    cs16_tool_v2::game::peek_vec3(&reader, found.player, 0)
-                {
+                if let Some((x, y, z)) = cs16_tool_v2::game::peek_vec3(&reader, found.player, 0) {
                     println!(
                         "  → SCAN OK hw+{rva:#x}  X={x:.1} Y={y:.1} Z={z:.1}  → position_global_hw_rva = \"{rva:#x}\""
                     );
@@ -416,9 +398,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 2048,
             ) {
                 let rva = found.player.wrapping_sub(client_base);
-                if let Some((x, y, z)) =
-                    cs16_tool_v2::game::peek_vec3(&reader, found.player, 0)
-                {
+                if let Some((x, y, z)) = cs16_tool_v2::game::peek_vec3(&reader, found.player, 0) {
                     println!(
                         "  → SCAN OK client+{rva:#x}  X={x:.1} Y={y:.1} Z={z:.1}  → position_global_client_rva = \"{rva:#x}\""
                     );
@@ -459,16 +439,22 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         let mut smart = Vec::new();
         for rva in (0x100000..0xF00000).step_by(4) {
             let ptr_addr = hw_base.wrapping_add(rva);
-            let Ok(player) = reader.read_u32(ptr_addr) else { continue };
+            let Ok(player) = reader.read_u32(ptr_addr) else {
+                continue;
+            };
             if player < 0x01000000 || player > 0x7FFF0000 || player & 3 != 0 {
                 continue;
             }
-            let Ok(hp) = reader.read_i32(player.wrapping_add(0xB74)) else { continue };
-            let Ok(money) = reader.read_i32(player.wrapping_add(0xE4)) else { continue };
-            let Ok(armor) = reader.read_i32(player.wrapping_add(0x10C)) else { continue };
-            if (1..=100).contains(&hp)
-                && (0..=16000).contains(&money)
-                && (0..=100).contains(&armor)
+            let Ok(hp) = reader.read_i32(player.wrapping_add(0xB74)) else {
+                continue;
+            };
+            let Ok(money) = reader.read_i32(player.wrapping_add(0xE4)) else {
+                continue;
+            };
+            let Ok(armor) = reader.read_i32(player.wrapping_add(0x10C)) else {
+                continue;
+            };
+            if (1..=100).contains(&hp) && (0..=16000).contains(&money) && (0..=100).contains(&armor)
             {
                 smart.push((rva, player, hp, armor, money));
             }
@@ -493,7 +479,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         // محدوده .data معمول hw.dll
         for rva in (0x100000..0xF00000).step_by(4) {
             let ptr_addr = hw_base.wrapping_add(rva);
-            let Ok(player) = reader.read_u32(ptr_addr) else { continue };
+            let Ok(player) = reader.read_u32(ptr_addr) else {
+                continue;
+            };
             if player < 0x01000000 || player > 0x7FFF0000 || player & 3 != 0 {
                 continue;
             }
@@ -516,9 +504,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             if !full.is_empty() {
                 println!("  ── HP=100 (local player محتمل):");
                 for (rva, player, hp_off, hp) in full.iter().take(10) {
-                    let armor = reader
-                        .read_i32(player.wrapping_add(0x10C))
-                        .unwrap_or(-1);
+                    let armor = reader.read_i32(player.wrapping_add(0x10C)).unwrap_or(-1);
                     let money = reader.read_i32(player.wrapping_add(0xE4)).unwrap_or(-1);
                     println!(
                         "  ★★ hw+{rva:#07x} → {player:#010x}  HP+{hp_off:#x}={hp}  armor={armor}  money={money}"
@@ -527,9 +513,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             }
             println!("  ── همه candidateها:");
             for (rva, player, hp_off, hp) in found.iter().take(15) {
-                println!(
-                    "  ★ hw+{rva:#07x} → player={player:#010x}  HP+{hp_off:#x}={hp}"
-                );
+                println!("  ★ hw+{rva:#07x} → player={player:#010x}  HP+{hp_off:#x}={hp}");
             }
         }
         println!();
@@ -541,7 +525,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         let mut found = Vec::new();
         for rva in (0x100000..0x200000).step_by(4) {
             let ptr_addr = client_base.wrapping_add(rva);
-            let Ok(player) = reader.read_u32(ptr_addr) else { continue };
+            let Ok(player) = reader.read_u32(ptr_addr) else {
+                continue;
+            };
             if player < 0x01000000 || player > 0x7FFF0000 || player & 3 != 0 {
                 continue;
             }
@@ -558,9 +544,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             println!("  (nothing)");
         } else {
             for (rva, player, hp_off, hp) in found.iter().take(10) {
-                println!(
-                    "  ★ client+{rva:#07x} → player={player:#010x}  HP+{hp_off:#x}={hp}"
-                );
+                println!("  ★ client+{rva:#07x} → player={player:#010x}  HP+{hp_off:#x}={hp}");
             }
         }
         println!();
@@ -586,9 +570,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     let v = reader.read_i32(addr).unwrap_or(-1);
                     let ok = v > 0 && v < config.clip_detection.max_value;
                     let mark = if ok { "✓" } else { "✗" };
-                    println!(
-                        "  {mark} clip[{i}] ({role}) @ {addr:#010x} (hw+{rva:#x}) = {v}"
-                    );
+                    println!("  {mark} clip[{i}] ({role}) @ {addr:#010x} (hw+{rva:#x}) = {v}");
                     clip_vals.push((i, addr, v, ok));
                 }
                 Err(e) => println!("  ✗ clip[{i}] ({role}) — chain broken: {e}"),
@@ -649,10 +631,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     if magazine.is_empty() {
         println!("  ✗ هیچ chain magazine معتبر نیست — در match با اسلحه تست کن");
     } else {
-        let best = magazine
-            .iter()
-            .max_by_key(|(_, _, v, _)| *v)
-            .unwrap();
+        let best = magazine.iter().max_by_key(|(_, _, v, _)| *v).unwrap();
         println!(
             "  → magazine pick: clip[{}] @ {:#x} = {} (بیشترین مقدار بین magazine chains)",
             best.0, best.1, best.2
@@ -662,7 +641,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     // ── جمع‌بندی ──
     println!("── Verdict ──");
-    let on_client = config.entity.local_player_module.eq_ignore_ascii_case("client");
+    let on_client = config
+        .entity
+        .local_player_module
+        .eq_ignore_ascii_case("client");
     let lp_module_base = if on_client { client_base } else { hw_base };
     let lp_tag = if on_client { "client" } else { "hw" };
     if lp_module_base != 0 {
@@ -690,7 +672,11 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             if client_base != 0 {
                 let addr = client_base.wrapping_add(off);
                 let hp = reader.read_i32(addr).unwrap_or(-1);
-                let mark = if (1..=100).contains(&hp) { "✓" } else { "✗" };
+                let mark = if (1..=100).contains(&hp) {
+                    "✓"
+                } else {
+                    "✗"
+                };
                 println!("  {mark} health_direct client+{off:#x} @ {addr:#010x} = {hp}");
             }
         }
@@ -700,7 +686,11 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             if client_base != 0 {
                 let addr = client_base.wrapping_add(off);
                 let armor = reader.read_i32(addr).unwrap_or(-1);
-                let mark = if (0..=100).contains(&armor) { "✓" } else { "✗" };
+                let mark = if (0..=100).contains(&armor) {
+                    "✓"
+                } else {
+                    "✗"
+                };
                 println!("  {mark} armor_direct client+{off:#x} @ {addr:#010x} = {armor}");
             }
         }
@@ -760,33 +750,30 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         } else {
             None
         };
-        let pos_found = cs16_tool_v2::game::read_hw_entity_world_origin(
-            &reader,
-            hw_base,
-            pos_entity_hw_rva,
-        )
-        .or_else(|| {
-            cs16_tool_v2::game::read_configured_global_position(
-                &reader,
-                hw_base,
-                client_base,
-                pos_global_hw_rva,
-                None,
-            )
-        })
-        .or_else(|| {
-            cs16_tool_v2::game::discover_position_live(
-                &reader,
-                hw_base,
-                client_base,
-                &pos_cands,
-                cfg_pos_off,
-                exp_hp,
-                400,
-                pos_global_hw_rva,
-                None,
-            )
-        });
+        let pos_found =
+            cs16_tool_v2::game::read_hw_entity_world_origin(&reader, hw_base, pos_entity_hw_rva)
+                .or_else(|| {
+                    cs16_tool_v2::game::read_configured_global_position(
+                        &reader,
+                        hw_base,
+                        client_base,
+                        pos_global_hw_rva,
+                        None,
+                    )
+                })
+                .or_else(|| {
+                    cs16_tool_v2::game::discover_position_live(
+                        &reader,
+                        hw_base,
+                        client_base,
+                        &pos_cands,
+                        cfg_pos_off,
+                        exp_hp,
+                        400,
+                        pos_global_hw_rva,
+                        None,
+                    )
+                });
         if let Some(rva) = view_client_rva {
             if let Some((h, mx, my)) =
                 cs16_tool_v2::game::read_view_aux(&reader, client_base, Some(rva))
@@ -813,18 +800,16 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         } else {
-            println!("  ✗ world XYZ: hw entity + movement test — در match با W/strafe دوباره dump بزن");
+            println!(
+                "  ✗ world XYZ: hw entity + movement test — در match با W/strafe دوباره dump بزن"
+            );
         }
     }
 
     if (1..=100).contains(&cfg_hp_val) {
-        println!(
-            "  ✓ health_offset={cfg_hp:#x} → HP={cfg_hp_val} (int) — type=int بگذار"
-        );
+        println!("  ✓ health_offset={cfg_hp:#x} → HP={cfg_hp_val} (int) — type=int بگذار");
     } else {
-        println!(
-            "  ✗ health_offset={cfg_hp:#x} → int={cfg_hp_val} — offset/type اشتباه"
-        );
+        println!("  ✗ health_offset={cfg_hp:#x} → int={cfg_hp_val} — offset/type اشتباه");
         if let Some((off, v)) = hits.first() {
             println!("  → پیشنهاد: health_offset = \"{off:#x}\" (الان HP={v})");
         }
@@ -845,10 +830,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             "  ✗ reserve_clip_index={reserve_idx} خارج از محدوده clip (len={})",
             config.chains.clip.len()
         );
-    } else if let Some((_, addr, v, ok)) = clip_vals
-        .iter()
-        .find(|(i, _, _, _)| *i == reserve_idx)
-    {
+    } else if let Some((_, addr, v, ok)) = clip_vals.iter().find(|(i, _, _, _)| *i == reserve_idx) {
         if *ok {
             println!(
                 "  ✓ reserve_clip_index={reserve_idx} → clip[{reserve_idx}] @ {addr:#x} = {v}"
@@ -861,12 +843,12 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     if magazine.is_empty() {
-        println!("  ✗ ammo magazine: هیچ chain clip[0..{}] کار نکرد", reserve_idx);
+        println!(
+            "  ✗ ammo magazine: هیچ chain clip[0..{}] کار نکرد",
+            reserve_idx
+        );
     } else {
-        let best = magazine
-            .iter()
-            .max_by_key(|(_, _, v, _)| *v)
-            .unwrap();
+        let best = magazine.iter().max_by_key(|(_, _, v, _)| *v).unwrap();
         println!(
             "  ✓ ammo magazine: clip[{}] = {} (engine همین را می‌نویسد)",
             best.0, best.2

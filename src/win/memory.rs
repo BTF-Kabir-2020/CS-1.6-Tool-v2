@@ -19,10 +19,12 @@ pub fn resolve_chain(
     let mut addr = base_ptr;
 
     for (step, &offset) in offsets.iter().enumerate() {
-        let next = reader.read_u32(addr).map_err(|_| MemoryError::ChainBroken {
-            step,
-            address: addr,
-        })?;
+        let next = reader
+            .read_u32(addr)
+            .map_err(|_| MemoryError::ChainBroken {
+                step,
+                address: addr,
+            })?;
         if next == 0 {
             return Err(MemoryError::ChainBroken {
                 step,

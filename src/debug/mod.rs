@@ -79,5 +79,9 @@ fn opt(valid: bool, v: i32) -> String {
 }
 
 fn yn(v: bool) -> &'static str {
-    if v { "YES" } else { "NO" }
+    if v {
+        "YES"
+    } else {
+        "NO"
+    }
 }

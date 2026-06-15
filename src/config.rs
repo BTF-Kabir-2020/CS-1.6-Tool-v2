@@ -383,8 +383,8 @@ impl AppConfig {
     pub fn load(path: impl AsRef<Path>) -> Result<Self, AppError> {
         let text = fs::read_to_string(path.as_ref())
             .map_err(|e| AppError::Config(format!("خواندن config: {e}")))?;
-        let cfg: Self = toml::from_str(&text)
-            .map_err(|e| AppError::Config(format!("parse: {e}")))?;
+        let cfg: Self =
+            toml::from_str(&text).map_err(|e| AppError::Config(format!("parse: {e}")))?;
         cfg.validate()?;
         Ok(cfg)
     }

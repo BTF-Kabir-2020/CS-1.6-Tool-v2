@@ -29,7 +29,10 @@ impl ProcessHandle {
 
         let handle = unsafe {
             OpenProcess(
-                PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION | PROCESS_QUERY_INFORMATION,
+                PROCESS_VM_READ
+                    | PROCESS_VM_WRITE
+                    | PROCESS_VM_OPERATION
+                    | PROCESS_QUERY_INFORMATION,
                 false,
                 pid,
             )
@@ -108,9 +111,7 @@ pub fn is_alive(pid: u32) -> bool {
     if pid == 0 {
         return false;
     }
-    let handle = unsafe {
-        OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, false, pid)
-    };
+    let handle = unsafe { OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, false, pid) };
     let Ok(handle) = handle else {
         return false;
     };
