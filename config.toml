@@ -1,0 +1,134 @@
+# CS 1.6 Tool v2 - dump from E:\games\gamecs\ (non-Steam build)
+# Run tool:  cargo run --release
+# Run dump:  cargo run --release --bin cs16-dump
+#
+# Dump findings:
+#   FAIL hw+0x32ABF4 local player (BLASTHACK) = NULL
+#   OK   local_player client+0x4B530 (CE player_health_from_base)
+#   OK   HP direct client+0x11D640 / entity+0x14
+#   OK   armor direct client+0x11EF0C
+#   FAIL money_hw chain → OK client+0x1213C4 fallback
+#   FAIL reserve primary chain → OK clip[2] fallback (reserve_clip_index=2)
+#   OK   clip[0] hw+0x7AF55C (magazine candidate)
+#   OK   clip[1] hw+0x7AF558 (magazine — engine picks highest)
+#   OK   clip[2] hw+0x7AF55C (reserve only — excluded from magazine pick)
+#   OK   position hw+0x7CD13C global world XYZ (offset 0 — primary)
+#   OK   view client+0x11D478 (H / mouse — NOT map coords)
+
+[process]
+name = "hl.exe"
+
+[modules]
+hw = "hw.dll"
+sw = "sw.dll"
+client = "client.dll"
+
+[targets]
+money = 15000
+clip = 1030
+reserve = 1090
+
+[features]
+write_enabled = true
+overlay_enabled = true
+debug_addresses = false
+money_enabled = true
+clip_enabled = true
+clip_write_enabled = true
+reserve_enabled = true
+reserve_write_enabled = true
+hp_enabled = true          # فقط خواندن + نمایش overlay
+armor_enabled = true
+position_enabled = true    # مختصات X/Y/Z بازیکن
+
+[timing]
+memory_loop_ms = 50
+overlay_loop_ms = 16
+connect_retry_ms = 250
+stale_reconnect_ticks = 40
+
+[entity]
+enabled = true
+# CE: player_health_from_base = ["client.dll"+0004B530]+14
+local_player_module = "client"
+local_player_rva = "0x4B530"
+money_offset = "0xE4"
+health_offset = "0x14"          # player_base + 0x14
+armor_offset = "0x18E0"         # player + (armor_direct - player) — fallback below
+health_type = "int"
+armor_type = "int"
+# CE direct static addresses (heal / armor)
+health_direct_rva = "0x11D640"
+armor_direct_rva = "0x11EF0C"
+# client+0x11D478 — pitch/yaw/height (با ماوس و پرش عوض می‌شود؛ X نقشه ثابت می‌ماند)
+view_client_rva = "0x11D478"
+position_offset = "0x34"           # entvars.origin روی hw pev — fallback entity
+position_entity_hw_rva = "0x169438"  # hw entity fallback — pev origin
+position_global_hw_rva = "0x7CD13C"  # world XYZ مستقیم (movement OK در dump)
+
+[overlay]
+offset_x = 12
+offset_y = 12
+font_size = 18
+font_name = "Segoe UI"
+font_bold = true
+line_spacing = 22
+position = "top-left"
+margin = 12
+
+[overlay.colors]
+money = "0x00D7FF"
+ammo = "0x00FF00"
+hp = "0x4444FF"
+armor = "0xFFAA00"
+position = "0xFFFF88"
+default = "0x00FF00"
+
+[overlay.display]
+show_money = true
+show_ammo = true
+show_hp = true
+show_armor = true
+show_position = true
+show_view_aux = true    # H + mouse از view_client_rva
+
+# clip[2] = reserve برای این build — در magazine pick استفاده نشود
+[chains]
+reserve_clip_index = 2
+
+[chains.reserve]
+base_rva = "0x007AF55C"
+offsets = ["0x74", "0x5C0", "0xA4", "0x5E8"]
+
+[chains.money_hw]
+base_rva = "0x006E92AC"
+offsets = ["0x1CC", "0x320", "0x4", "0x7C", "0x21C"]
+
+[chains.money_client_fallback]
+direct_rva = "0x001213C4"
+
+[[chains.clip]]
+base_rva = "0x007AF55C"
+offsets = ["0x74", "0x5C8", "0x4", "0x320", "0xA4", "0x5D8", "0xCC"]
+
+[[chains.clip]]
+base_rva = "0x007AF558"
+offsets = ["0x74", "0x5C8", "0x4", "0x320", "0xA4", "0x5D8", "0xCC"]
+
+[[chains.clip]]
+base_rva = "0x007AF55C"
+offsets = ["0x74", "0x5C8", "0xA4", "0x5D4", "0xCC"]
+
+[clip_detection]
+min_value = 0
+max_value = 150
+
+[hud_sync]
+enabled = false
+clip_struct_offset = "0xCC"
+hud_clip_offset = "0xD0"
+
+[debug_console]
+enabled = false
+interval_ms = 1000
+clear_screen = true
