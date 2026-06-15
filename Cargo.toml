@@ -2,7 +2,7 @@
 name = "cs16-tool-v2"
 version = "2.0.0"
 edition = "2021"
-description = "CS 1.6 external memory tool — clean Rust rewrite with multi-strategy address resolution"
+description = "CS 1.6 external memory tool — educational/research use only. No warranty."
 authors = ["CS16 Project"]
 license = "LicenseRef-cs16-non-commercial"
 readme = "README.md"

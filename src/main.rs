@@ -33,6 +33,13 @@ struct Cli {
 }
 
 fn main() {
+    println!("╔══════════════════════════════════════════════════════════╗");
+    println!("║  DISCLAIMER: Educational use only. No warranty.         ║");
+    println!("║  Author is NOT responsible for any damage or misuse.    ║");
+    println!("║  Commercial use is strictly prohibited.                 ║");
+    println!("║  See LICENSE for full terms.                            ║");
+    println!("╚══════════════════════════════════════════════════════════╝");
+    println!();
     if let Err(e) = run() {
         error!("{e}");
         eprintln!("\nخطا: {e}");

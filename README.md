@@ -246,6 +246,27 @@ cargo test
 
 ---
 
-MIT — فقط آموزشی
+---
+
+## ⚠️ Disclaimer / سلب مسئولیت
+
+> **EN:** This software is provided "AS IS" for **educational and research purposes only**.
+> The author(s) are **NOT responsible** for any damage, data loss, hardware failure,
+> legal consequences, or misuse of this software. Use at your own risk.
+> Commercial use, redistribution for profit, and claiming authorship are strictly prohibited.
+> See [LICENSE](LICENSE) for full terms.
+
+> **FA:** این نرم‌افزار **فقط برای اهداف آموزشی و تحقیقاتی** ارائه شده است.
+> نویسنده(گان) در قبال **هیچگونه خسارت، از بین رفتن داده، خرابی سخت‌افزار،
+> پیامدهای قانونی یا سوءاستفاده** از این نرم‌افزار مسئولیتی ندارند.
+> استفاده از این نرم‌افزار به عهده خود شماست.
+> استفاده تجاری، توزیع برای کسب درآمد و ادعای نویسندگی کاملاً ممنوع است.
+> شرایط کامل در [LICENSE](LICENSE) موجود است.
+
+---
+
+## License
+
+**Non-Commercial License** — فقط آموزشی. مشاهده [LICENSE](LICENSE).
 
 </div>
