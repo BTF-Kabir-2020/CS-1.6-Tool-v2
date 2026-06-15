@@ -240,7 +240,8 @@ cargo test
 | File | Content |
 |------|---------|
 | `ARCHITECTURE.md` | Full architecture + flow / معماری کامل + flow |
-| `CHANGELOG.md` | Version history / تاریخچه نسخه‌ها |
+| `RUST_SYNTAX.md` | Rust syntax guide (`&`, `mut`, `clone`, `*`, `_`, etc.) / راهنمای نحو Rust |
+| `LICENSE` | Non-commercial license / لایسنس غیرتجاری |
 
 ---
 

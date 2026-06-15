@@ -1,15 +1,29 @@
+/// [EN] Debug console module — renders a live debug panel to stdout with ANSI escape codes.
+/// [FA] ماژول کنسول دیباگ — پنل دیباگ زنده با کدهای فرار ANSI در stdout رندر می‌شود.
 use std::io::{self, Write};
 
 use crate::config::DebugConsoleConfig;
 use crate::game::DebugSnapshot;
 
+/// [EN] Debug console that periodically prints game state snapshots to stdout.
+/// [FA] کنسول دیباگ که به‌صورت دوره‌ای اسنپ‌شات وضعیت بازی را در stdout چاپ می‌کند.
 pub struct DebugConsole {
+    /// [EN] Configuration controlling display settings and update interval.
+    /// [FA] تنظیمات کنترل نمایش و فاصله به‌روزرسانی.
     pub config: DebugConsoleConfig,
+    /// [EN] Monotonically increasing tick counter for each render cycle.
+    /// [FA] شمارنده تیک صعودی برای هر چرخه رندر.
     tick: u64,
+    /// [EN] Timestamp of the last render to enforce the interval throttle.
+    /// [FA] زمان‌سنج آخرین رندر برای اجرای محدوده فاصله.
     last: std::time::Instant,
 }
 
 impl DebugConsole {
+    /// [EN] Create a new debug console with the given configuration.
+    /// The initial last-render time is set 10 seconds in the past so the first render fires immediately.
+    /// [FA] یک کنسول دیباگ جدید با تنظیمات داده‌شده می‌سازد.
+    /// زمان آخرین رندر اولیه ۱۰ ثانیه در گذشته تنظیم می‌شود تا اولین رندر فوراً اجرا شود.
     pub fn new(config: DebugConsoleConfig) -> Self {
         Self {
             config,
@@ -20,6 +34,8 @@ impl DebugConsole {
         }
     }
 
+    /// [EN] Conditionally render the debug snapshot if enough time has elapsed since the last render.
+    /// [FA] در صورت گذشت زمان کافی از آخرین رندر، اسنپ‌شات دیباگ را به‌صورت شرطی رندر می‌کند.
     pub fn maybe_print(&mut self, snap: &DebugSnapshot) {
         if !self.config.enabled {
             return;
@@ -33,6 +49,10 @@ impl DebugConsole {
         self.render(snap);
     }
 
+    /// [EN] Render the debug panel to stdout: header, game state, and key bindings.
+    /// Uses ANSI escape sequences for screen clearing and Unicode box-drawing characters.
+    /// [FA] پنل دیباگ را در stdout رندر می‌کند: سرصفحه، وضعیت بازی و کلیدهای میانبر.
+    /// از توالی‌های فرار ANSI برای پاک کردن صفحه و کاراکترهای جعبه‌کشی یونیکد استفاده می‌کند.
     fn render(&self, snap: &DebugSnapshot) {
         let mut out = String::new();
         if self.config.clear_screen {
@@ -70,6 +90,8 @@ impl DebugConsole {
     }
 }
 
+/// [EN] Format an optional integer: show the value if valid, "--" otherwise.
+/// [FA] فرمت یک عدد اختیاری: اگر معتبر باشد مقدار را نشان می‌دهد، وگرنه "--".
 fn opt(valid: bool, v: i32) -> String {
     if valid {
         v.to_string()
@@ -78,6 +100,8 @@ fn opt(valid: bool, v: i32) -> String {
     }
 }
 
+/// [EN] Convert a boolean to "YES" or "NO" string.
+/// [FA] تبدیل یک بولین به رشته "YES" یا "NO".
 fn yn(v: bool) -> &'static str {
     if v {
         "YES"
