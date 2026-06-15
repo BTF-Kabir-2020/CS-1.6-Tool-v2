@@ -1,4 +1,5 @@
-//! یک‌بار attach به hl.exe و validate کردن همه chain/offsetها.
+//! [EN] One-shot attach to hl.exe and validate all memory chains/offsets.
+//! [FA] یک‌بار attach به hl.exe و validate کردن همه chain/offsetها.
 
 use std::path::PathBuf;
 
@@ -7,6 +8,12 @@ use cs16_tool_v2::config::{parse_hex_u32, parse_offsets, AppConfig};
 use cs16_tool_v2::win::memory::{resolve_chain, MemoryReader};
 use cs16_tool_v2::win::process::{engine_base, ProcessHandle};
 
+/// [EN] CLI argument parser for cs16-dump. Loads a TOML config and dumps
+///      all known memory chains, local player pointers, entity fields, and
+///      ammo offsets from the running cs16.exe process.
+/// [FA] تحلیلگر آرگومان خط فرمان برای cs16-dump. یک فایل TOML بارگذاری کرده
+///      و همه chains حافظه، اشاره‌گرهای local player، فیلدهای entity و
+///      آفست‌های مهمات را از پروسه در حال اجرای cs16.exe استخراج می‌کند.
 #[derive(Parser)]
 #[command(name = "cs16-dump", about = "Dump و validate offset/chain از hl.exe")]
 struct Cli {
@@ -14,7 +21,12 @@ struct Cli {
     config: PathBuf,
 }
 
-/// RVAهای شناخته‌شده local player از BLASTHACK / UC / CE
+/// [EN] Known local-player RVA candidates sourced from BLASTHACK / UC / CE.
+///      Each entry is (label, hex RVA string). Tried in order; first valid
+///      pointer that yields a plausible entity address wins.
+/// [FA] آفست‌های شناخته‌شده local player از BLASTHACK / UC / CE.
+///      هر ورودی شامل (برچسب، رشته HEX RVA) است. به ترتیب آزمایش شده و
+///      اولین اشاره‌گر معتبر که آدرس entity معتبر برگرداند، انتخاب می‌شود.
 const LOCAL_PLAYER_CANDIDATES: &[(&str, &str)] = &[
     ("hw.dll+0x32ABF4", "0x32ABF4"),
     ("hw.dll+0x13FDF4", "0x13FDF4"),
@@ -22,18 +34,29 @@ const LOCAL_PLAYER_CANDIDATES: &[(&str, &str)] = &[
     ("client.dll+0x17EF28", "0x17EF28"),
 ];
 
-/// offsetهای health/armor/money شناخته‌شده
+/// [EN] Known entity-field offsets for health (HP). Each entry is a
+///      (description, byte-offset-from-entity-base) pair.
+/// [FA] آفست‌های شناخته‌شده فیلد entity برای سلامتی (HP). هر ورودی شامل
+///      (توضیحات، آفست بایتی از انتهای entity) است.
 const HEALTH_CANDIDATES: &[(&str, u32)] = &[
     ("CE player+0x14", 0x14),
     ("m_dwHealth (BLASTHACK)", 0xB74),
     ("m_iHealth alt", 0xFC),
     ("m_iClientHealth", 0x59C),
 ];
+/// [EN] Known entity-field offsets for armor value.
+/// [FA] آفست‌های شناخته‌شده فیلد entity برای مقدار زره (armor).
 const ARMOR_CANDIDATES: &[(&str, u32)] =
     &[("m_dwArmor (BLASTHACK)", 0x10C), ("m_iArmor alt", 0x100)];
+/// [EN] Known entity-field offsets for money / account balance.
+/// [FA] آفست‌های شناخته‌شده فیلد entity برای پول / موجودی حساب.
 const MONEY_CANDIDATES: &[(&str, u32)] =
     &[("m_dwMoney (BLASTHACK)", 0xE4), ("m_iAccount alt", 0x94)];
 
+/// [EN] Entry point. Parses CLI args, runs the dump, and exits with code 1
+///      on any error.
+/// [FA] نقطه ورود. آرگومان‌های خط فرمان را تحلیل کرده، dump را اجرا می‌کند
+///      و در صورت بروز خطا با کد 1 خارج می‌شود.
 fn main() {
     if let Err(e) = run() {
         eprintln!("\nخطا: {e}");
@@ -41,6 +64,17 @@ fn main() {
     }
 }
 
+/// [EN] Core dump routine. Attaches to the game process, resolves module
+///      bases, iterates pointer chains from config.toml, discovers the local
+///      player entity, dumps entity fields (HP/armor/money), probes position
+///      vectors, runs heuristic health/smart/auto scans, validates ammo
+///      chains, and prints a final verdict with actionable suggestions.
+/// [FA] رویه اصلی dump. به پروسه بازی متصل شده، مبنای ماژول‌ها را resolve
+///      می‌کند، chains اشاره‌گر از config.toml را iterate کرده، entity local
+///      player را کشف می‌کند، فیلدهای entity (HP/armor/money) را نمایش
+///      می‌دهد، بردارهای position را بررسی کرده، اسکنهای heuristic/smart/auto
+///      را اجرا می‌کند، chains مهمات را validate کرده و نتیجه نهایی را با
+///      پیشنهادات عملی چاپ می‌کند.
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
     let config = AppConfig::load(&cli.config)?;
@@ -53,6 +87,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let pid = process.pid();
     println!("✓ متصل به {} (PID={pid})\n", config.process.name);
 
+    // ── Resolve module base addresses ──
     // ── ماژول‌ها ──
     let hw_base = engine_base(&process, &config.modules).unwrap_or(0);
     let client_base = process.module_base(&config.modules.client).unwrap_or(0);
@@ -70,6 +105,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     let reader = MemoryReader::new(&process);
 
+    // ── Pointer Chains from config.toml ──
     // ── Chains از config ──
     println!("── Pointer Chains (config.toml) ──");
     test_chain(
@@ -116,6 +152,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
     println!();
 
+    // ── Probe local player RVA candidates ──
     // ── Local Player candidates ──
     println!("── Local Player Pointer ──");
     let mut best_player = 0u32;
@@ -148,6 +185,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    // config entity RVA — module from config.toml
     // config entity RVA (ماژول از config.toml)
     let on_client_cfg = config
         .entity
@@ -180,6 +218,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // health_direct − hp_off (CE player_health_from_base)
+    // Derive local player address from health direct RVA minus health offset
     let cfg_hp_off = parse_hex_u32(&config.entity.health_offset).unwrap_or(0x14);
     if let Some(rva) = config.entity.health_direct_rva.as_deref() {
         if let Ok(off) = parse_hex_u32(rva) {
@@ -209,6 +248,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // entity اصلی: config/health_direct اولویت دارد نه اولین hw candidate
+    // Select the best entity pointer: config or health_direct takes priority
     let entity_player = if cfg_entity_player != 0 {
         cfg_entity_player
     } else {
@@ -226,6 +266,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("── Entity Fields (player={entity_player:#010x} via {entity_label}) ──");
 
+    // Read each candidate offset from the entity base and display both int and float representations
     for (name, off) in HEALTH_CANDIDATES {
         let addr = entity_player.wrapping_add(*off);
         let i = reader.read_i32(addr).unwrap_or(-999);
@@ -248,8 +289,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     println!();
 
     // ── Position (vec3 origin) ──
+    // ── Position (vec3 origin) — probe entity world coordinates ──
+    // ── Position (vec3 origin) — probe entity world coordinates ──
     println!("── Position (player vec3 X/Y/Z) ──");
-    let wait_ms = 800u64;
+    let wait_ms = 800u64; // delay for movement-based discovery
     let cfg_pos_off = parse_hex_u32(&config.entity.position_offset).unwrap_or(0x8);
     let pos_entity_hw_rva = config
         .entity
@@ -317,6 +360,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    // Run a brief movement test: wait for the player to move, then check which
+    // candidate offset changed — the one that changed holds world position.
     cs16_tool_v2::game::prepare_walk_test(2);
     if let Some(found) = cs16_tool_v2::game::discover_position_live(
         &reader,
@@ -409,8 +454,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
     println!();
 
+    // ── Scan: int 1..100 in entity range ──
     // ── Scan: int 1..100 در محدوده entity ──
     println!("── Health Scan (int 1..100, player+0..0x2000) ──");
+    // Walk every 4-byte slot in the first 0x2000 bytes of entity memory
     let mut hits = Vec::new();
     for off in (0..0x2000).step_by(4) {
         let addr = entity_player.wrapping_add(off);
@@ -433,7 +480,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
     println!();
 
+    // ── Smart scan: entity with valid HP + Money + Armor ──
     // ── Smart scan: entity با HP + Money + Armor معتبر ──
+    // Scan hw.dll for pointer RVAs pointing to entities with plausible game-state values
     if hw_base != 0 {
         println!("── Smart Scan (HP 1..100 + money 0..16000 + armor 0..100) ──");
         let mut smart = Vec::new();
@@ -442,6 +491,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             let Ok(player) = reader.read_u32(ptr_addr) else {
                 continue;
             };
+            // Validate pointer is in user-space range and 4-byte aligned
             if !(0x01000000..=0x7FFF0000).contains(&player) || player & 3 != 0 {
                 continue;
             }
@@ -473,18 +523,23 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // ── Brute scan: hw.dll static RVAs → pointer → HP ──
+    // ── Brute scan: hw.dll static RVAs → pointer → HP ──
+    // Scan hw.dll .data section for pointers to entities with valid HP values
     if hw_base != 0 {
         println!("── Auto-Scan local_player (hw.dll RVAs → entity → HP 1..100) ──");
         let mut found = Vec::new();
         // محدوده .data معمول hw.dll
+        // Typical hw.dll .data section range
         for rva in (0x100000..0xF00000).step_by(4) {
             let ptr_addr = hw_base.wrapping_add(rva);
             let Ok(player) = reader.read_u32(ptr_addr) else {
                 continue;
             };
+            // Validate pointer is in user-space range and 4-byte aligned
             if !(0x01000000..=0x7FFF0000).contains(&player) || player & 3 != 0 {
                 continue;
             }
+            // Try each known health offset — if any yields 1..100, it's a candidate
             for &hp_off in &[0xB74u32, 0xFC, 0x100, 0x334, 0x59C] {
                 let Ok(hp) = reader.read_i32(player.wrapping_add(hp_off)) else {
                     continue;
@@ -520,6 +575,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // ── Brute scan: client.dll ──
+    // ── Brute scan: client.dll RVAs → pointer → HP ──
     if client_base != 0 {
         println!("── Auto-Scan local_player (client.dll) ──");
         let mut found = Vec::new();
@@ -550,9 +606,11 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         println!();
     }
 
+    // ── Scan clip/reserve chain bases: are ammo offsets correct? ──
     // ── Scan clip/reserve chain bases: آیا offsetهای ammo درست‌اند؟ ──
     println!("── Ammo Chains (magazine vs reserve) ──");
     let reserve_idx = config.chains.reserve_clip_index;
+    // clip_vals stores (chain_index, resolved_address, value, is_valid)
     let mut clip_vals: Vec<(usize, u32, i32, bool)> = Vec::new();
 
     for (i, chain) in config.chains.clip.iter().enumerate() {
@@ -592,6 +650,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 println!("  {mark} reserve (primary) @ {addr:#010x} (hw+{rva:#x}) = {v}");
             }
             Err(e) => {
+                // Walk the chain step-by-step to show where dereferencing broke
                 print!("  ✗ reserve (primary) — chain broken: {e} — steps:");
                 let mut addr = hw_base.wrapping_add(rva);
                 for (step, &off) in offs.iter().enumerate() {
@@ -611,6 +670,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    // Fallback: if primary reserve chain failed, try the clip-based reserve index
     let reserve_fb = clip_vals
         .iter()
         .find(|(i, _, v, ok)| *i == reserve_idx && *ok && *v > 0);
@@ -624,6 +684,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    // Pick the magazine chain with the highest ammo value as the active weapon clip
     let magazine: Vec<_> = clip_vals
         .iter()
         .filter(|(i, _, _, ok)| *i != reserve_idx && *ok)
@@ -639,8 +700,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
     println!();
 
+    // ── Final verdict / summary ──
     // ── جمع‌بندی ──
     println!("── Verdict ──");
+    // Determine which module the local player RVA lives in
     let on_client = config
         .entity
         .local_player_module
@@ -864,6 +927,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+/// [EN] Print a module base address with a checkmark/cross indicator.
+/// [FA] مبنای آدرس ماژول را با نشان تیک/خط چاپ می‌کند.
 fn print_mod(name: &str, base: u32) {
     if base != 0 {
         println!("  ✓ {name} = {base:#010x}");
@@ -872,6 +937,11 @@ fn print_mod(name: &str, base: u32) {
     }
 }
 
+/// [EN] Test a single pointer chain: parse base RVA + offsets, dereference
+///      the chain, and print the resulting address with its i32 value.
+/// [FA] یک زنجیره اشاره‌گر واحد را آزمایش می‌کند: base RVA + آفست‌ها را
+///      parse کرده، زنجیره را dereference کرده و آدرس نتیجه به همراه مقدار
+///      i32 آن را چاپ می‌کند.
 fn test_chain(
     process: &ProcessHandle,
     hw_base: u32,
@@ -910,6 +980,11 @@ fn test_chain(
     }
 }
 
+/// [EN] Return a human-readable label for well-known CS 1.6 entity offsets
+///      (health, armor, money, life state), or an empty string if unknown.
+/// [FA] برچسب خوانا برای آفست‌های شناخته‌شده entity در CS 1.6
+///      (سلامتی، زره، پول، وضعیت حیات) برمی‌گرداند، یا رشته خالی در صورت
+///      ناشناخته بودن.
 fn known_offset_label(off: u32) -> String {
     match off {
         0xB74 => "  ← m_dwHealth (BLASTHACK)".into(),
